@@ -1,0 +1,9 @@
+language: go
+go:
+    - 1.5
+
+build:
+  ci:
+    - go get -d -v ./...
+    - go build -v ./...
+    - go test -v ./...
