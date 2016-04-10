@@ -2,9 +2,12 @@ package cram
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/satori/go.uuid"
 )
 
 const (
@@ -33,6 +36,18 @@ func ParseTest(r io.Reader) (cmds []Command, err error) {
 		}
 	}
 	err = scanner.Err()
+	return
+}
+
+// MakeScript produces a script ready to be sent to a shell. The UUID
+// is used to generate banner commands that are interspersed with the
+// commands. This makes it possible to parse the output.
+func MakeScript(cmds []Command, u uuid.UUID) (lines []string) {
+	banner := "--- CRAM " + u.String() + " ---"
+	for _, cmd := range cmds {
+		echo := fmt.Sprintf("echo \"%s $?\"", banner)
+		lines = append(lines, cmd.CmdLine, echo)
+	}
 	return
 }
 
