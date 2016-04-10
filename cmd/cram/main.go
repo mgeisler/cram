@@ -30,6 +30,7 @@ func run(ctx *cli.Context) {
 		if err == nil {
 			fmt.Print(".")
 		} else {
+			fmt.Fprintln(os.Stderr, err)
 			fmt.Print("E")
 			errors++
 		}
