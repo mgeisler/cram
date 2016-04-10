@@ -28,6 +28,11 @@ type ExecutedCommand struct {
 	ExitCode     int      // Exit code.
 }
 
+type Result struct {
+	Commands []Command // The commands.
+	Script   string    // The script passed to the shell.
+}
+
 // Parse splits an input test file into Commands.
 func ParseTest(r io.Reader) (cmds []Command, err error) {
 	scanner := bufio.NewScanner(r)
@@ -102,12 +107,21 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 
 // Process parses a .t file, executes the test commands and compares
 // the actual output to the expected output.
-func Process(path string) (commands []Command, err error) {
+func Process(path string) (result Result, err error) {
 	fp, err := os.Open(path)
 	if err != nil {
 		return
 	}
 	defer fp.Close()
-	commands, err = ParseTest(fp)
+	commands, err := ParseTest(fp)
+	if err != nil {
+		return
+	}
+
+	u := uuid.NewV4()
+	banner := MakeBanner(u)
+	lines := MakeScript(commands, banner)
+
+	result = Result{commands, strings.Join(lines, "\n")}
 	return
 }

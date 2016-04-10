@@ -3,28 +3,22 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/codegangsta/cli"
 	"github.com/mgeisler/cram"
-	"github.com/satori/go.uuid"
 )
 
 func run(ctx *cli.Context) {
 	errors, failures, cmdCount := 0, 0, 0
-	u := uuid.NewV4()
-	banner := cram.MakeBanner(u)
 
 	for _, path := range ctx.Args() {
-		commands, err := cram.Process(path)
-
-		lines := cram.MakeScript(commands, banner)
+		result, err := cram.Process(path)
 		if ctx.GlobalBool("debug") {
 			fmt.Fprintf(os.Stderr, "# %s\n", path)
-			fmt.Fprintln(os.Stderr, strings.Join(lines, "\n"))
+			fmt.Fprintln(os.Stderr, result.Script)
 		}
 
-		cmdCount += len(commands)
+		cmdCount += len(result.Commands)
 		// No tests are run yet, so we can only distinguish between
 		// successes and errors, not test failures.
 		if err == nil {
