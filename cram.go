@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -29,8 +31,8 @@ type ExecutedCommand struct {
 }
 
 type Result struct {
-	Commands []Command // The commands.
-	Script   string    // The script passed to the shell.
+	Commands []ExecutedCommand // The executed commands.
+	Script   string            // The script passed to the shell.
 }
 
 // Parse splits an input test file into Commands.
@@ -105,9 +107,18 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 	return executed, scanner.Err()
 }
 
+// Execute a script in the specified working directory.
+func ExecuteScript(workdir string, lines []string) ([]byte, error) {
+	script := strings.Join(lines, "\n")
+	cmd := exec.Command("/bin/sh", "-")
+	cmd.Dir = workdir
+	cmd.Stdin = strings.NewReader(script)
+	return cmd.CombinedOutput()
+}
+
 // Process parses a .t file, executes the test commands and compares
 // the actual output to the expected output.
-func Process(path string) (result Result, err error) {
+func Process(tempdir, path string) (result Result, err error) {
 	fp, err := os.Open(path)
 	if err != nil {
 		return
@@ -118,10 +129,25 @@ func Process(path string) (result Result, err error) {
 		return
 	}
 
+	workdir := filepath.Join(tempdir, filepath.Base(path))
+	err = os.Mkdir(workdir, 0700)
+	if err != nil {
+		return
+	}
+
 	u := uuid.NewV4()
 	banner := MakeBanner(u)
 	lines := MakeScript(commands, banner)
 
-	result = Result{commands, strings.Join(lines, "\n")}
+	output, err := ExecuteScript(workdir, lines)
+	if err != nil {
+		return
+	}
+
+	executed, err := ParseOutput(commands, output, banner)
+	if err != nil {
+		return
+	}
+	result = Result{executed, strings.Join(lines, "\n")}
 	return
 }

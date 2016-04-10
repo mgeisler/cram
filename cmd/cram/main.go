@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/codegangsta/cli"
@@ -9,10 +10,16 @@ import (
 )
 
 func run(ctx *cli.Context) {
+	tempdir, err := ioutil.TempDir("", "cram-")
+	if err != nil {
+		return
+	}
+	defer os.RemoveAll(tempdir)
+
 	errors, failures, cmdCount := 0, 0, 0
 
 	for _, path := range ctx.Args() {
-		result, err := cram.Process(path)
+		result, err := cram.Process(tempdir, path)
 		if ctx.GlobalBool("debug") {
 			fmt.Fprintf(os.Stderr, "# %s\n", path)
 			fmt.Fprintln(os.Stderr, result.Script)
