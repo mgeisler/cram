@@ -2,9 +2,11 @@ package cram
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/satori/go.uuid"
@@ -18,6 +20,12 @@ const (
 type Command struct {
 	CmdLine        string   // Command line as it will be passed to the shell.
 	ExpectedOutput []string // Expected output including any newlines.
+}
+
+type ExecutedCommand struct {
+	*Command              // Command responsible for the output.
+	ActualOutput [][]byte // Actual output read from stdout and stderr.
+	ExitCode     int      // Exit code.
 }
 
 // Parse splits an input test file into Commands.
@@ -49,6 +57,42 @@ func MakeScript(cmds []Command, u uuid.UUID) (lines []string) {
 		lines = append(lines, cmd.CmdLine, echo)
 	}
 	return
+}
+
+func ParseOutput(cmds []Command, output []byte, banner string) (
+	executed []ExecutedCommand, err error) {
+	r := bytes.NewReader(output)
+	scanner := bufio.NewScanner(r)
+
+	byteBanner := []byte(banner)
+
+	i := 0
+	actualOutput := [][]byte{}
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if bytes.HasPrefix(line, byteBanner) {
+			number := string(line[len(byteBanner)+1:])
+			exitCode, e := strconv.Atoi(number)
+			if e != nil {
+				err = e
+				return
+			}
+			executed = append(executed, ExecutedCommand{
+				Command:      &cmds[i],
+				ExitCode:     exitCode,
+				ActualOutput: actualOutput,
+			})
+			actualOutput = nil
+			i++
+		} else {
+			// Copy line since subsequent calls to Scanner.Scan may
+			// overwrite the underlying array of line
+			c := make([]byte, len(line))
+			copy(c, line)
+			actualOutput = append(actualOutput, c)
+		}
+	}
+	return executed, scanner.Err()
 }
 
 // Process parses a .t file, executes the test commands and compares
