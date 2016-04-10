@@ -14,7 +14,11 @@ func run(ctx *cli.Context) {
 	if err != nil {
 		return
 	}
-	defer os.RemoveAll(tempdir)
+	if ctx.GlobalBool("keep-tmp") {
+		fmt.Println("# Temporary directory:", tempdir)
+	} else {
+		defer os.RemoveAll(tempdir)
+	}
 
 	errors, failures, cmdCount := 0, 0, 0
 
@@ -49,6 +53,10 @@ func main() {
 		cli.BoolFlag{
 			Name:  "debug",
 			Usage: "output debug information",
+		},
+		cli.BoolFlag{
+			Name:  "keep-tmp",
+			Usage: "keep temporary directory after executing tests",
 		},
 	}
 	app.Run(os.Args)
