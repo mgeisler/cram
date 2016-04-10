@@ -1,13 +1,27 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/codegangsta/cli"
 	"github.com/mgeisler/cram"
 )
+
+func showFailures(failures []cram.ExecutedCommand) {
+	for _, cmd := range failures {
+		actual := string(bytes.Join(cmd.ActualOutput, []byte("\n  ")))
+		expected := strings.Join(cmd.ExpectedOutput, "\n  ")
+
+		fmt.Printf("When executing %+#v, got\n", cmd.CmdLine)
+		fmt.Println(" ", actual)
+		fmt.Println("but expected")
+		fmt.Println(" ", expected)
+	}
+}
 
 func run(ctx *cli.Context) {
 	tempdir, err := ioutil.TempDir("", "cram-")
@@ -20,7 +34,8 @@ func run(ctx *cli.Context) {
 		defer os.RemoveAll(tempdir)
 	}
 
-	errors, failures, cmdCount := 0, 0, 0
+	errors, cmdCount := 0, 0
+	failures := []cram.ExecutedCommand{}
 
 	for _, path := range ctx.Args() {
 		result, err := cram.Process(tempdir, path)
@@ -30,20 +45,25 @@ func run(ctx *cli.Context) {
 		}
 
 		cmdCount += len(result.Commands)
-		// No tests are run yet, so we can only distinguish between
-		// successes and errors, not test failures.
-		if err == nil {
-			fmt.Print(".")
-		} else {
+
+		switch {
+		case err != nil:
 			fmt.Fprintln(os.Stderr, err)
 			fmt.Print("E")
 			errors++
+		case len(result.Failures) > 0:
+			fmt.Print("F")
+			failures = append(failures, result.Failures...)
+		default:
+			fmt.Print(".")
 		}
 	}
 	fmt.Print("\n")
 
+	showFailures(failures)
+
 	fmt.Printf("# Ran %d tests (%d commands), %d errors, %d failures.\n",
-		len(ctx.Args()), cmdCount, errors, failures)
+		len(ctx.Args()), cmdCount, errors, len(failures))
 }
 
 func main() {

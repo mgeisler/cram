@@ -33,6 +33,7 @@ type ExecutedCommand struct {
 type Result struct {
 	Commands []ExecutedCommand // The executed commands.
 	Script   string            // The script passed to the shell.
+	Failures []ExecutedCommand // Failed commands.
 }
 
 // Parse splits an input test file into Commands.
@@ -116,6 +117,17 @@ func ExecuteScript(workdir string, lines []string) ([]byte, error) {
 	return cmd.CombinedOutput()
 }
 
+func filterFailures(executed []ExecutedCommand) (failures []ExecutedCommand) {
+	for _, cmd := range executed {
+		actual := string(bytes.Join(cmd.ActualOutput, []byte("\n")))
+		expected := strings.Join(cmd.ExpectedOutput, "\n")
+		if actual != expected {
+			failures = append(failures, cmd)
+		}
+	}
+	return
+}
+
 // Process parses a .t file, executes the test commands and compares
 // the actual output to the expected output.
 func Process(tempdir, path string) (result Result, err error) {
@@ -148,6 +160,9 @@ func Process(tempdir, path string) (result Result, err error) {
 	if err != nil {
 		return
 	}
-	result = Result{executed, strings.Join(lines, "\n")}
+
+	failures := filterFailures(executed)
+	result = Result{executed, strings.Join(lines, "\n"),
+		failures}
 	return
 }
