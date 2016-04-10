@@ -13,10 +13,12 @@ import (
 func run(ctx *cli.Context) {
 	errors, failures, cmdCount := 0, 0, 0
 	u := uuid.NewV4()
+	banner := cram.MakeBanner(u)
+
 	for _, path := range ctx.Args() {
 		commands, err := cram.Process(path)
 
-		lines := cram.MakeScript(commands, u)
+		lines := cram.MakeScript(commands, banner)
 		if ctx.GlobalBool("debug") {
 			fmt.Fprintf(os.Stderr, "# %s\n", path)
 			fmt.Fprintln(os.Stderr, strings.Join(lines, "\n"))

@@ -66,7 +66,7 @@ func TestMakeScriptEmpty(t *testing.T) {
 	u, err := uuid.FromString("123456781234abcd1234123412345678")
 	assert.NoError(t, err)
 	cmds := []Command{}
-	lines := MakeScript(cmds, u)
+	lines := MakeScript(cmds, MakeBanner(u))
 	assert.Len(t, lines, 0)
 }
 
@@ -74,7 +74,7 @@ func TestMakeScript(t *testing.T) {
 	u, err := uuid.FromString("123456781234abcd1234123412345678")
 	assert.NoError(t, err)
 	cmds := []Command{{"ls", nil}, {"touch foo.txt", nil}}
-	lines := MakeScript(cmds, u)
+	lines := MakeScript(cmds, MakeBanner(u))
 	banner := `echo "--- CRAM 12345678-1234-abcd-1234-123412345678 --- $?"`
 	if assert.Len(t, lines, 4) {
 		assert.Equal(t, "ls", lines[0])
