@@ -63,6 +63,15 @@ func run(ctx *cli.Context) {
 
 	fmt.Printf("# Ran %d tests (%d commands), %d errors, %d failures.\n",
 		len(ctx.Args()), cmdCount, errors, len(failures))
+
+	switch {
+	case errors > 0:
+		os.Exit(2)
+	case len(failures) > 0:
+		os.Exit(1)
+	default:
+		os.Exit(0)
+	}
 }
 
 func main() {
