@@ -20,8 +20,9 @@ const (
 )
 
 type Command struct {
-	CmdLine        string   // Command line as it will be passed to the shell.
-	ExpectedOutput []string // Expected output lines.
+	CmdLine          string   // Command line passed to the shell.
+	ExpectedOutput   []string // Expected output lines.
+	ExpectedExitCode int      // Expected exit code.
 }
 
 type ExecutedCommand struct {
