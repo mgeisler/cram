@@ -21,7 +21,7 @@ const (
 
 type Command struct {
 	CmdLine        string   // Command line as it will be passed to the shell.
-	ExpectedOutput []string // Expected output including any newlines.
+	ExpectedOutput []string // Expected output lines.
 }
 
 type ExecutedCommand struct {
