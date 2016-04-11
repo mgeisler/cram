@@ -25,9 +25,9 @@ type Command struct {
 }
 
 type ExecutedCommand struct {
-	*Command              // Command responsible for the output.
-	ActualOutput []string // Actual output read from stdout and stderr.
-	ExitCode     int      // Exit code.
+	*Command                // Command responsible for the output.
+	ActualOutput   []string // Actual output read from stdout and stderr.
+	ActualExitCode int      // Exit code.
 }
 
 type Result struct {
@@ -89,9 +89,9 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 				return
 			}
 			executed = append(executed, ExecutedCommand{
-				Command:      &cmds[i],
-				ExitCode:     exitCode,
-				ActualOutput: actualOutput,
+				Command:        &cmds[i],
+				ActualExitCode: exitCode,
+				ActualOutput:   actualOutput,
 			})
 			actualOutput = nil
 			i++

@@ -98,9 +98,9 @@ func TestParseOutputEmpty(t *testing.T) {
 	assert.NoError(t, err)
 	if assert.Len(t, executed, 2) {
 		assert.Len(t, executed[0].ActualOutput, 0)
-		assert.Equal(t, 0, executed[0].ExitCode)
+		assert.Equal(t, 0, executed[0].ActualExitCode)
 		assert.Len(t, executed[1].ActualOutput, 0)
-		assert.Equal(t, 1, executed[1].ExitCode)
+		assert.Equal(t, 1, executed[1].ActualExitCode)
 	}
 }
 
@@ -120,8 +120,8 @@ bar
 	assert.NoError(t, err)
 	if assert.Len(t, executed, 2) {
 		assert.Equal(t, []string{"foo"}, executed[0].ActualOutput)
-		assert.Equal(t, 0, executed[0].ExitCode)
+		assert.Equal(t, 0, executed[0].ActualExitCode)
 		assert.Equal(t, []string{"bar"}, executed[1].ActualOutput)
-		assert.Equal(t, 1, executed[1].ExitCode)
+		assert.Equal(t, 1, executed[1].ActualExitCode)
 	}
 }
