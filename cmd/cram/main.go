@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,7 +12,7 @@ import (
 
 func showFailures(failures []cram.ExecutedCommand) {
 	for _, cmd := range failures {
-		actual := string(bytes.Join(cmd.ActualOutput, []byte("\n  ")))
+		actual := strings.Join(cmd.ActualOutput, "\n  ")
 		expected := strings.Join(cmd.ExpectedOutput, "\n  ")
 
 		fmt.Printf("When executing %+#v, got\n", cmd.CmdLine)

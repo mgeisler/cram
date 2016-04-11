@@ -26,7 +26,7 @@ type Command struct {
 
 type ExecutedCommand struct {
 	*Command              // Command responsible for the output.
-	ActualOutput [][]byte // Actual output read from stdout and stderr.
+	ActualOutput []string // Actual output read from stdout and stderr.
 	ExitCode     int      // Exit code.
 }
 
@@ -77,14 +77,12 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 	r := bytes.NewReader(output)
 	scanner := bufio.NewScanner(r)
 
-	byteBanner := []byte(banner)
-
 	i := 0
-	actualOutput := [][]byte{}
+	actualOutput := []string{}
 	for scanner.Scan() {
-		line := scanner.Bytes()
-		if bytes.HasPrefix(line, byteBanner) {
-			number := string(line[len(byteBanner)+1:])
+		line := scanner.Text()
+		if strings.HasPrefix(line, banner) {
+			number := line[len(banner)+1:]
 			exitCode, e := strconv.Atoi(number)
 			if e != nil {
 				err = e
@@ -98,11 +96,7 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 			actualOutput = nil
 			i++
 		} else {
-			// Copy line since subsequent calls to Scanner.Scan may
-			// overwrite the underlying array of line
-			c := make([]byte, len(line))
-			copy(c, line)
-			actualOutput = append(actualOutput, c)
+			actualOutput = append(actualOutput, line)
 		}
 	}
 	return executed, scanner.Err()
@@ -119,7 +113,7 @@ func ExecuteScript(workdir string, lines []string) ([]byte, error) {
 
 func filterFailures(executed []ExecutedCommand) (failures []ExecutedCommand) {
 	for _, cmd := range executed {
-		actual := string(bytes.Join(cmd.ActualOutput, []byte("\n")))
+		actual := strings.Join(cmd.ActualOutput, "\n")
 		expected := strings.Join(cmd.ExpectedOutput, "\n")
 		if actual != expected {
 			failures = append(failures, cmd)

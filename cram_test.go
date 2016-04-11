@@ -119,9 +119,9 @@ bar
 	executed, err := ParseOutput(cmds, output, banner)
 	assert.NoError(t, err)
 	if assert.Len(t, executed, 2) {
-		assert.Equal(t, [][]byte{[]byte("foo")}, executed[0].ActualOutput)
+		assert.Equal(t, []string{"foo"}, executed[0].ActualOutput)
 		assert.Equal(t, 0, executed[0].ExitCode)
-		assert.Equal(t, [][]byte{[]byte("bar")}, executed[1].ActualOutput)
+		assert.Equal(t, []string{"bar"}, executed[1].ActualOutput)
 		assert.Equal(t, 1, executed[1].ExitCode)
 	}
 }
