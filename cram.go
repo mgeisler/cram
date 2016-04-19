@@ -158,9 +158,15 @@ func ExecuteScript(workdir string, lines []string) ([]byte, error) {
 
 func filterFailures(executed []ExecutedCommand) (failures []ExecutedCommand) {
 	for _, cmd := range executed {
-		actual := strings.Join(cmd.ActualOutput, "\n")
-		expected := strings.Join(cmd.ExpectedOutput, "\n")
-		if actual != expected {
+		// Quick check first
+		err := cmd.ActualExitCode != cmd.ExpectedExitCode
+		// More expensive check next
+		if !err {
+			actual := strings.Join(cmd.ActualOutput, "\n")
+			expected := strings.Join(cmd.ExpectedOutput, "\n")
+			err = actual != expected
+		}
+		if err {
 			failures = append(failures, cmd)
 		}
 	}

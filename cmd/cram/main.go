@@ -12,13 +12,18 @@ import (
 
 func showFailures(failures []cram.ExecutedCommand) {
 	for _, cmd := range failures {
-		actual := strings.Join(cmd.ActualOutput, "\n  ")
-		expected := strings.Join(cmd.ExpectedOutput, "\n  ")
-
 		fmt.Printf("When executing %+#v, got\n", cmd.CmdLine)
-		fmt.Println(" ", actual)
-		fmt.Println("but expected")
-		fmt.Println(" ", expected)
+		if cmd.ActualExitCode != cmd.ExpectedExitCode {
+			fmt.Printf("  exit code %d, but expected %d\n",
+				cmd.ActualExitCode, cmd.ExpectedExitCode)
+		} else {
+			actual := strings.Join(cmd.ActualOutput, "\n  ")
+			expected := strings.Join(cmd.ExpectedOutput, "\n  ")
+
+			fmt.Println(" ", actual)
+			fmt.Println("but expected")
+			fmt.Println(" ", expected)
+		}
 	}
 }
 
