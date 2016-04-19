@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,13 +12,18 @@ import (
 
 func showFailures(failures []cram.ExecutedCommand) {
 	for _, cmd := range failures {
-		actual := string(bytes.Join(cmd.ActualOutput, []byte("\n  ")))
-		expected := strings.Join(cmd.ExpectedOutput, "\n  ")
-
 		fmt.Printf("When executing %+#v, got\n", cmd.CmdLine)
-		fmt.Println(" ", actual)
-		fmt.Println("but expected")
-		fmt.Println(" ", expected)
+		if cmd.ActualExitCode != cmd.ExpectedExitCode {
+			fmt.Printf("  exit code %d, but expected %d\n",
+				cmd.ActualExitCode, cmd.ExpectedExitCode)
+		} else {
+			actual := strings.Join(cmd.ActualOutput, "\n  ")
+			expected := strings.Join(cmd.ExpectedOutput, "\n  ")
+
+			fmt.Println(" ", actual)
+			fmt.Println("but expected")
+			fmt.Println(" ", expected)
+		}
 	}
 }
 
@@ -64,6 +68,15 @@ func run(ctx *cli.Context) {
 
 	fmt.Printf("# Ran %d tests (%d commands), %d errors, %d failures.\n",
 		len(ctx.Args()), cmdCount, errors, len(failures))
+
+	switch {
+	case errors > 0:
+		os.Exit(2)
+	case len(failures) > 0:
+		os.Exit(1)
+	default:
+		os.Exit(0)
+	}
 }
 
 func main() {

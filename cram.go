@@ -20,14 +20,15 @@ const (
 )
 
 type Command struct {
-	CmdLine        string   // Command line as it will be passed to the shell.
-	ExpectedOutput []string // Expected output including any newlines.
+	CmdLine          string   // Command line passed to the shell.
+	ExpectedOutput   []string // Expected output lines.
+	ExpectedExitCode int      // Expected exit code.
 }
 
 type ExecutedCommand struct {
-	*Command              // Command responsible for the output.
-	ActualOutput [][]byte // Actual output read from stdout and stderr.
-	ExitCode     int      // Exit code.
+	*Command                // Command responsible for the output.
+	ActualOutput   []string // Actual output read from stdout and stderr.
+	ActualExitCode int      // Exit code.
 }
 
 type Result struct {
@@ -36,20 +37,64 @@ type Result struct {
 	Failures []ExecutedCommand // Failed commands.
 }
 
+// updateExitCode looks at the last line of output and updates exit
+// code if it is of the form [n]. The exit code line is only required
+// for non-zero exit codes.
+func updateExitCode(cmd *Command) {
+	lines := len(cmd.ExpectedOutput)
+	if lines == 0 {
+		return
+	}
+	line := cmd.ExpectedOutput[lines-1]
+
+	l := len(line)
+	if l == 0 || line[0] != '[' || line[l-1] != ']' {
+		return
+	}
+
+	exitCode, err := strconv.Atoi(line[1 : l-1])
+	if err != nil {
+		// Not an exit code, just normal output.
+		return
+	}
+	cmd.ExpectedOutput = cmd.ExpectedOutput[:lines-1]
+	cmd.ExpectedExitCode = exitCode
+}
+
 // Parse splits an input test file into Commands.
 func ParseTest(r io.Reader) (cmds []Command, err error) {
+	const (
+		inCommentary = iota
+		inCommand
+		inOutput
+	)
+
 	scanner := bufio.NewScanner(r)
+	state := inCommentary
 	for scanner.Scan() {
 		line := scanner.Text()
 		switch {
 		case strings.HasPrefix(line, commandPrefix):
+			if state == inOutput {
+				updateExitCode(&cmds[len(cmds)-1])
+			}
 			line = line[len(commandPrefix):]
 			cmds = append(cmds, Command{CmdLine: line})
+			state = inCommand
 		case strings.HasPrefix(line, outputPrefix):
 			line = line[len(outputPrefix):]
 			cmd := &cmds[len(cmds)-1]
 			cmd.ExpectedOutput = append(cmd.ExpectedOutput, line)
+			state = inOutput
+		default:
+			if state == inOutput {
+				updateExitCode(&cmds[len(cmds)-1])
+			}
+			state = inCommentary
 		}
+	}
+	if state == inOutput {
+		updateExitCode(&cmds[len(cmds)-1])
 	}
 	err = scanner.Err()
 	return
@@ -77,32 +122,26 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 	r := bytes.NewReader(output)
 	scanner := bufio.NewScanner(r)
 
-	byteBanner := []byte(banner)
-
 	i := 0
-	actualOutput := [][]byte{}
+	actualOutput := []string{}
 	for scanner.Scan() {
-		line := scanner.Bytes()
-		if bytes.HasPrefix(line, byteBanner) {
-			number := string(line[len(byteBanner)+1:])
+		line := scanner.Text()
+		if strings.HasPrefix(line, banner) {
+			number := line[len(banner)+1:]
 			exitCode, e := strconv.Atoi(number)
 			if e != nil {
 				err = e
 				return
 			}
 			executed = append(executed, ExecutedCommand{
-				Command:      &cmds[i],
-				ExitCode:     exitCode,
-				ActualOutput: actualOutput,
+				Command:        &cmds[i],
+				ActualExitCode: exitCode,
+				ActualOutput:   actualOutput,
 			})
 			actualOutput = nil
 			i++
 		} else {
-			// Copy line since subsequent calls to Scanner.Scan may
-			// overwrite the underlying array of line
-			c := make([]byte, len(line))
-			copy(c, line)
-			actualOutput = append(actualOutput, c)
+			actualOutput = append(actualOutput, line)
 		}
 	}
 	return executed, scanner.Err()
@@ -119,9 +158,15 @@ func ExecuteScript(workdir string, lines []string) ([]byte, error) {
 
 func filterFailures(executed []ExecutedCommand) (failures []ExecutedCommand) {
 	for _, cmd := range executed {
-		actual := string(bytes.Join(cmd.ActualOutput, []byte("\n")))
-		expected := strings.Join(cmd.ExpectedOutput, "\n")
-		if actual != expected {
+		// Quick check first
+		err := cmd.ActualExitCode != cmd.ExpectedExitCode
+		// More expensive check next
+		if !err {
+			actual := strings.Join(cmd.ActualOutput, "\n")
+			expected := strings.Join(cmd.ExpectedOutput, "\n")
+			err = actual != expected
+		}
+		if err {
 			failures = append(failures, cmd)
 		}
 	}
