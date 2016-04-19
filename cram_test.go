@@ -64,6 +64,41 @@ func TestParseCommands(t *testing.T) {
 	}
 }
 
+func TestParseExitCodes(t *testing.T) {
+	assert := assert.New(t)
+	buf := strings.NewReader(`
+Command with exit code but no output:
+
+  $ false
+  [1]
+
+Commandline with exit code and output:
+
+  $ echo hello; false
+  hello
+  [1]
+
+Mixture of commands and output:
+
+  $ false
+  [1]
+  $ true
+  $ echo hello; false
+  hello
+  [1]
+`)
+	cmds, err := ParseTest(buf)
+	assert.NoError(err)
+
+	if assert.Len(cmds, 5) {
+		assert.Equal(Command{"false", []string{}, 1}, cmds[0])
+		assert.Equal(Command{"echo hello; false", []string{"hello"}, 1}, cmds[1])
+		assert.Equal(Command{"false", []string{}, 1}, cmds[2])
+		assert.Equal(Command{"true", nil, 0}, cmds[3])
+		assert.Equal(Command{"echo hello; false", []string{"hello"}, 1}, cmds[4])
+	}
+}
+
 func TestMakeScriptEmpty(t *testing.T) {
 	u, err := uuid.FromString("123456781234abcd1234123412345678")
 	assert.NoError(t, err)

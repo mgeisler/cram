@@ -37,20 +37,64 @@ type Result struct {
 	Failures []ExecutedCommand // Failed commands.
 }
 
+// updateExitCode looks at the last line of output and updates exit
+// code if it is of the form [n]. The exit code line is only required
+// for non-zero exit codes.
+func updateExitCode(cmd *Command) {
+	lines := len(cmd.ExpectedOutput)
+	if lines == 0 {
+		return
+	}
+	line := cmd.ExpectedOutput[lines-1]
+
+	l := len(line)
+	if l == 0 || line[0] != '[' || line[l-1] != ']' {
+		return
+	}
+
+	exitCode, err := strconv.Atoi(line[1 : l-1])
+	if err != nil {
+		// Not an exit code, just normal output.
+		return
+	}
+	cmd.ExpectedOutput = cmd.ExpectedOutput[:lines-1]
+	cmd.ExpectedExitCode = exitCode
+}
+
 // Parse splits an input test file into Commands.
 func ParseTest(r io.Reader) (cmds []Command, err error) {
+	const (
+		inCommentary = iota
+		inCommand
+		inOutput
+	)
+
 	scanner := bufio.NewScanner(r)
+	state := inCommentary
 	for scanner.Scan() {
 		line := scanner.Text()
 		switch {
 		case strings.HasPrefix(line, commandPrefix):
+			if state == inOutput {
+				updateExitCode(&cmds[len(cmds)-1])
+			}
 			line = line[len(commandPrefix):]
 			cmds = append(cmds, Command{CmdLine: line})
+			state = inCommand
 		case strings.HasPrefix(line, outputPrefix):
 			line = line[len(outputPrefix):]
 			cmd := &cmds[len(cmds)-1]
 			cmd.ExpectedOutput = append(cmd.ExpectedOutput, line)
+			state = inOutput
+		default:
+			if state == inOutput {
+				updateExitCode(&cmds[len(cmds)-1])
+			}
+			state = inCommentary
 		}
+	}
+	if state == inOutput {
+		updateExitCode(&cmds[len(cmds)-1])
 	}
 	err = scanner.Err()
 	return
