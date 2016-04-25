@@ -11,11 +11,19 @@ import (
 	"github.com/mgeisler/cram"
 )
 
+// We use a single, shared reader of os.Stdin to avoid losing data due
+// to buffering. If we create a new reader every time we need to read
+// a line of text, the reader will read "too much" (it buffers) and we
+// will lose the buffered data when we create a new reader. This is
+// visible when trying to answer two prompts using
+//
+//   $ echo "x\ny" | cram --interactive
+var stdinReader = bufio.NewReader(os.Stdin)
+
 func booleanPrompt(prompt string) (bool, error) {
-	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print(prompt, " ")
-		answer, err := reader.ReadString('\n')
+		answer, err := stdinReader.ReadString('\n')
 		if err != nil {
 			return false, err
 		}
@@ -31,8 +39,12 @@ func booleanPrompt(prompt string) (bool, error) {
 	}
 }
 
-func showFailures(tests []cram.ExecutedTest) {
+func processFailures(tests []cram.ExecutedTest, interactive bool) (
+	err error) {
+
 	for _, test := range tests {
+		var needPatching []cram.ExecutedCommand
+
 		for _, cmd := range test.Failures {
 			fmt.Printf("When executing %+#v, got\n", cram.DropEol(cmd.CmdLine))
 			if cmd.ActualExitCode != cmd.ExpectedExitCode {
@@ -45,9 +57,44 @@ func showFailures(tests []cram.ExecutedTest) {
 				fmt.Println(" ", actual)
 				fmt.Println("but expected")
 				fmt.Println(" ", expected)
+
+				if interactive {
+					accept, e := booleanPrompt("Accept changed output?")
+					if e != nil {
+						err = e
+						return
+					}
+					if accept {
+						needPatching = append(needPatching, cmd)
+					}
+				}
 			}
 		}
+
+		if needPatching != nil {
+			input, e := os.Open(test.Path)
+			if err = e; err != nil {
+				return
+			}
+
+			outPath := test.Path + ".patched"
+			output, e := os.Create(outPath)
+			if err = e; err != nil {
+				return
+			}
+			err = cram.Patch(input, output, needPatching)
+			if err != nil {
+				return
+			}
+			err = os.Rename(outPath, test.Path)
+			if err != nil {
+				return
+			}
+			fmt.Println("Patched", test.Path)
+		}
+
 	}
+	return
 }
 
 func run(ctx *cli.Context) {
@@ -87,7 +134,7 @@ func run(ctx *cli.Context) {
 	}
 	fmt.Print("\n")
 
-	showFailures(failures)
+	processFailures(failures, ctx.GlobalBool("interactive"))
 
 	fmt.Printf("# Ran %d tests (%d commands), %d errors, %d failures.\n",
 		len(ctx.Args()), cmdCount, errors, len(failures))
@@ -106,6 +153,10 @@ func main() {
 	app := cli.NewApp()
 	app.Action = run
 	app.Flags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "interactive",
+			Usage: "interactively update test file on failure",
+		},
 		cli.BoolFlag{
 			Name:  "debug",
 			Usage: "output debug information",
