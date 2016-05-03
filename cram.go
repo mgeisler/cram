@@ -23,6 +23,8 @@ type Command struct {
 	CmdLine          string   // Command line passed to the shell.
 	ExpectedOutput   []string // Expected output lines.
 	ExpectedExitCode int      // Expected exit code.
+	Path             string   // Test file.
+	Lineno           int      // Line number of first output line.
 }
 
 type ExecutedCommand struct {
@@ -76,7 +78,7 @@ func updateExitCode(cmd *Command) {
 }
 
 // Parse splits an input test file into Commands.
-func ParseTest(r io.Reader) (cmds []Command, err error) {
+func ParseTest(r io.Reader, path string) (cmds []Command, err error) {
 	const (
 		inCommentary = iota
 		inCommand
@@ -85,6 +87,7 @@ func ParseTest(r io.Reader) (cmds []Command, err error) {
 
 	scanner := bufio.NewScanner(r)
 	state := inCommentary
+	lineno := 0
 	for scanner.Scan() {
 		line := scanner.Text()
 		switch {
@@ -93,7 +96,12 @@ func ParseTest(r io.Reader) (cmds []Command, err error) {
 				updateExitCode(&cmds[len(cmds)-1])
 			}
 			line = line[len(commandPrefix):]
-			cmds = append(cmds, Command{CmdLine: line})
+			cmd := Command{
+				CmdLine: line,
+				Lineno:  lineno + 1,
+				Path:    path,
+			}
+			cmds = append(cmds, cmd)
 			state = inCommand
 		case strings.HasPrefix(line, outputPrefix):
 			line = line[len(outputPrefix):]
@@ -106,6 +114,7 @@ func ParseTest(r io.Reader) (cmds []Command, err error) {
 			}
 			state = inCommentary
 		}
+		lineno++
 	}
 	if state == inOutput {
 		updateExitCode(&cmds[len(cmds)-1])
@@ -195,7 +204,7 @@ func Process(tempdir, path string) (result Result, err error) {
 		return
 	}
 	defer fp.Close()
-	commands, err := ParseTest(fp)
+	commands, err := ParseTest(fp, path)
 	if err != nil {
 		return
 	}

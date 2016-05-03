@@ -33,7 +33,7 @@ func TestDropEol(t *testing.T) {
 
 func TestParseEmpty(t *testing.T) {
 	buf := strings.NewReader("")
-	cmds, err := ParseTest(buf)
+	cmds, err := ParseTest(buf, "<string>")
 
 	assert.NoError(t, err)
 	assert.Len(t, cmds, 0)
@@ -41,7 +41,7 @@ func TestParseEmpty(t *testing.T) {
 
 func TestParseCommentaryOnly(t *testing.T) {
 	buf := strings.NewReader("This file only has\nsome commentary.\n")
-	cmds, err := ParseTest(buf)
+	cmds, err := ParseTest(buf, "<string>")
 
 	assert.NoError(t, err)
 	assert.Len(t, cmds, 0)
@@ -53,11 +53,11 @@ func TestParseNoOutput(t *testing.T) {
   $ touch foo
   $ touch bar
 `)
-	cmds, err := ParseTest(buf)
+	cmds, err := ParseTest(buf, "<string>")
 	assert.NoError(err)
 	if assert.Len(cmds, 2) {
-		assert.Equal(Command{"touch foo", nil, 0}, cmds[0])
-		assert.Equal(Command{"touch bar", nil, 0}, cmds[1])
+		assert.Equal(Command{"touch foo", nil, 0, "<string>", 2}, cmds[0])
+		assert.Equal(Command{"touch bar", nil, 0, "<string>", 3}, cmds[1])
 	}
 }
 
@@ -70,19 +70,19 @@ func TestParseCommands(t *testing.T) {
   $ echo goodbye
   goodbye
 `)
-	cmds, err := ParseTest(buf)
+	cmds, err := ParseTest(buf, "<string>")
 	assert.NoError(err)
 
 	if assert.Len(cmds, 2) {
 		assert.Equal(Command{
 			`echo "hello\nworld"`,
 			[]string{"hello", "world"},
-			0,
+			0, "<string>", 2,
 		}, cmds[0])
 		assert.Equal(Command{
 			"echo goodbye",
 			[]string{"goodbye"},
-			0,
+			0, "<string>", 5,
 		}, cmds[1])
 	}
 }
@@ -110,15 +110,24 @@ Mixture of commands and output:
   hello
   [1]
 `)
-	cmds, err := ParseTest(buf)
+	cmds, err := ParseTest(buf, "<string>")
 	assert.NoError(err)
 
 	if assert.Len(cmds, 5) {
-		assert.Equal(Command{"false", []string{}, 1}, cmds[0])
-		assert.Equal(Command{"echo hello; false", []string{"hello"}, 1}, cmds[1])
-		assert.Equal(Command{"false", []string{}, 1}, cmds[2])
-		assert.Equal(Command{"true", nil, 0}, cmds[3])
-		assert.Equal(Command{"echo hello; false", []string{"hello"}, 1}, cmds[4])
+		assert.Equal(Command{"false", []string{}, 1, "<string>", 4},
+			cmds[0])
+		assert.Equal(Command{
+			"echo hello; false", []string{"hello"}, 1, "<string>", 9},
+			cmds[1])
+		assert.Equal(Command{
+			"false", []string{}, 1, "<string>", 15},
+			cmds[2])
+		assert.Equal(Command{
+			"true", nil, 0, "<string>", 17},
+			cmds[3])
+		assert.Equal(Command{
+			"echo hello; false", []string{"hello"}, 1, "<string>", 18},
+			cmds[4])
 	}
 }
 
@@ -133,7 +142,10 @@ func TestMakeScriptEmpty(t *testing.T) {
 func TestMakeScript(t *testing.T) {
 	u, err := uuid.FromString("123456781234abcd1234123412345678")
 	assert.NoError(t, err)
-	cmds := []Command{{"ls", nil, 0}, {"touch foo.txt", nil, 0}}
+	cmds := []Command{
+		{"ls", nil, 0, "<string>", 0},
+		{"touch foo.txt", nil, 0, "<string>", 0},
+	}
 	lines := MakeScript(cmds, MakeBanner(u))
 	banner := `echo "--- CRAM 12345678-1234-abcd-1234-123412345678 --- $?"`
 	if assert.Len(t, lines, 4) {
@@ -146,8 +158,8 @@ func TestMakeScript(t *testing.T) {
 
 func TestParseOutputEmpty(t *testing.T) {
 	cmds := []Command{
-		{"touch foo", nil, 0},
-		{"touch bar", nil, 0},
+		{"touch foo", nil, 0, "<string>", 0},
+		{"touch bar", nil, 0, "<string>", 0},
 	}
 	banner := "--- CRAM 12345678-1234-abcd-1234-123412345678 ---"
 	output := []byte(`--- CRAM 12345678-1234-abcd-1234-123412345678 --- 0
@@ -166,8 +178,8 @@ func TestParseOutputEmpty(t *testing.T) {
 
 func TestParseOutput(t *testing.T) {
 	cmds := []Command{
-		{"echo foo", []string{"foo"}, 0},
-		{"echo bar", []string{"bar"}, 0},
+		{"echo foo", []string{"foo"}, 0, "<string>", 0},
+		{"echo bar", []string{"bar"}, 0, "<string>", 0},
 	}
 	banner := "--- CRAM 12345678-1234-abcd-1234-123412345678 ---"
 	output := []byte(`foo
