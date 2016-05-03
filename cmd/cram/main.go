@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,6 +10,26 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/mgeisler/cram"
 )
+
+func booleanPrompt(prompt string) (bool, error) {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print(prompt, " ")
+		answer, err := reader.ReadString('\n')
+		if err != nil {
+			return false, err
+		}
+		answer = strings.ToLower(strings.TrimSpace(answer))
+		switch answer {
+		case "y", "yes":
+			return true, nil
+		case "n", "no":
+			return false, nil
+		default:
+			fmt.Println("Please answer 'yes' or 'no'")
+		}
+	}
+}
 
 func showFailures(failures []cram.ExecutedCommand) {
 	for _, cmd := range failures {
