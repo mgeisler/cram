@@ -33,13 +33,13 @@ func booleanPrompt(prompt string) (bool, error) {
 
 func showFailures(failures []cram.ExecutedCommand) {
 	for _, cmd := range failures {
-		fmt.Printf("When executing %+#v, got\n", cmd.CmdLine)
+		fmt.Printf("When executing %+#v, got\n", cram.DropEol(cmd.CmdLine))
 		if cmd.ActualExitCode != cmd.ExpectedExitCode {
 			fmt.Printf("  exit code %d, but expected %d\n",
 				cmd.ActualExitCode, cmd.ExpectedExitCode)
 		} else {
-			actual := strings.Join(cmd.ActualOutput, "\n  ")
-			expected := strings.Join(cmd.ExpectedOutput, "\n  ")
+			actual := cram.DropEol(strings.Join(cmd.ActualOutput, "  "))
+			expected := cram.DropEol(strings.Join(cmd.ExpectedOutput, "  "))
 
 			fmt.Println(" ", actual)
 			fmt.Println("but expected")

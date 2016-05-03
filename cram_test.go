@@ -56,8 +56,8 @@ func TestParseNoOutput(t *testing.T) {
 	cmds, err := ParseTest(buf, "<string>")
 	assert.NoError(err)
 	if assert.Len(cmds, 2) {
-		assert.Equal(Command{"touch foo", nil, 0, "<string>", 2}, cmds[0])
-		assert.Equal(Command{"touch bar", nil, 0, "<string>", 3}, cmds[1])
+		assert.Equal(Command{"touch foo\n", nil, 0, "<string>", 2}, cmds[0])
+		assert.Equal(Command{"touch bar\n", nil, 0, "<string>", 3}, cmds[1])
 	}
 }
 
@@ -75,13 +75,13 @@ func TestParseCommands(t *testing.T) {
 
 	if assert.Len(cmds, 2) {
 		assert.Equal(Command{
-			`echo "hello\nworld"`,
-			[]string{"hello", "world"},
+			"echo \"hello\\nworld\"\n",
+			[]string{"hello\n", "world\n"},
 			0, "<string>", 2,
 		}, cmds[0])
 		assert.Equal(Command{
-			"echo goodbye",
-			[]string{"goodbye"},
+			"echo goodbye\n",
+			[]string{"goodbye\n"},
 			0, "<string>", 5,
 		}, cmds[1])
 	}
@@ -114,19 +114,20 @@ Mixture of commands and output:
 	assert.NoError(err)
 
 	if assert.Len(cmds, 5) {
-		assert.Equal(Command{"false", []string{}, 1, "<string>", 4},
+		assert.Equal(Command{
+			"false\n", []string{}, 1, "<string>", 4},
 			cmds[0])
 		assert.Equal(Command{
-			"echo hello; false", []string{"hello"}, 1, "<string>", 9},
+			"echo hello; false\n", []string{"hello\n"}, 1, "<string>", 9},
 			cmds[1])
 		assert.Equal(Command{
-			"false", []string{}, 1, "<string>", 15},
+			"false\n", []string{}, 1, "<string>", 15},
 			cmds[2])
 		assert.Equal(Command{
-			"true", nil, 0, "<string>", 17},
+			"true\n", nil, 0, "<string>", 17},
 			cmds[3])
 		assert.Equal(Command{
-			"echo hello; false", []string{"hello"}, 1, "<string>", 18},
+			"echo hello; false\n", []string{"hello\n"}, 1, "<string>", 18},
 			cmds[4])
 	}
 }
@@ -147,7 +148,7 @@ func TestMakeScript(t *testing.T) {
 		{"touch foo.txt", nil, 0, "<string>", 0},
 	}
 	lines := MakeScript(cmds, MakeBanner(u))
-	banner := `echo "--- CRAM 12345678-1234-abcd-1234-123412345678 --- $?"`
+	banner := "echo \"--- CRAM 12345678-1234-abcd-1234-123412345678 --- $?\"\n"
 	if assert.Len(t, lines, 4) {
 		assert.Equal(t, "ls", lines[0])
 		assert.Equal(t, banner, lines[1])
@@ -191,9 +192,9 @@ bar
 	executed, err := ParseOutput(cmds, output, banner)
 	assert.NoError(t, err)
 	if assert.Len(t, executed, 2) {
-		assert.Equal(t, []string{"foo"}, executed[0].ActualOutput)
+		assert.Equal(t, []string{"foo\n"}, executed[0].ActualOutput)
 		assert.Equal(t, 0, executed[0].ActualExitCode)
-		assert.Equal(t, []string{"bar"}, executed[1].ActualOutput)
+		assert.Equal(t, []string{"bar\n"}, executed[1].ActualOutput)
 		assert.Equal(t, 1, executed[1].ActualExitCode)
 	}
 }

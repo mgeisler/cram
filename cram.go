@@ -61,7 +61,7 @@ func updateExitCode(cmd *Command) {
 	if lines == 0 {
 		return
 	}
-	line := cmd.ExpectedOutput[lines-1]
+	line := DropEol(cmd.ExpectedOutput[lines-1])
 
 	l := len(line)
 	if l == 0 || line[0] != '[' || line[l-1] != ']' {
@@ -85,11 +85,12 @@ func ParseTest(r io.Reader, path string) (cmds []Command, err error) {
 		inOutput
 	)
 
-	scanner := bufio.NewScanner(r)
+	reader := bufio.NewReader(r)
 	state := inCommentary
 	lineno := 0
-	for scanner.Scan() {
-		line := scanner.Text()
+	line := ""
+	for err == nil {
+		line, err = reader.ReadString('\n')
 		switch {
 		case strings.HasPrefix(line, commandPrefix):
 			if state == inOutput {
@@ -119,7 +120,9 @@ func ParseTest(r io.Reader, path string) (cmds []Command, err error) {
 	if state == inOutput {
 		updateExitCode(&cmds[len(cmds)-1])
 	}
-	err = scanner.Err()
+	if err == io.EOF {
+		err = nil
+	}
 	return
 }
 
@@ -133,7 +136,7 @@ func MakeBanner(u uuid.UUID) string {
 // banner should be a random string. It will be inserted in the output
 // together with the exit status of each command.
 func MakeScript(cmds []Command, banner string) (lines []string) {
-	echo := fmt.Sprintf("echo \"%s $?\"", banner)
+	echo := fmt.Sprintf("echo \"%s $?\"\n", banner)
 	for _, cmd := range cmds {
 		lines = append(lines, cmd.CmdLine, echo)
 	}
@@ -143,14 +146,15 @@ func MakeScript(cmds []Command, banner string) (lines []string) {
 func ParseOutput(cmds []Command, output []byte, banner string) (
 	executed []ExecutedCommand, err error) {
 	r := bytes.NewReader(output)
-	scanner := bufio.NewScanner(r)
+	reader := bufio.NewReader(r)
 
 	i := 0
 	actualOutput := []string{}
-	for scanner.Scan() {
-		line := scanner.Text()
+	line := ""
+	for err == nil {
+		line, err = reader.ReadString('\n')
 		if strings.HasPrefix(line, banner) {
-			number := line[len(banner)+1:]
+			number := DropEol(line[len(banner)+1:])
 			exitCode, e := strconv.Atoi(number)
 			if e != nil {
 				err = e
@@ -167,12 +171,15 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 			actualOutput = append(actualOutput, line)
 		}
 	}
-	return executed, scanner.Err()
+	if err == io.EOF {
+		err = nil
+	}
+	return
 }
 
 // Execute a script in the specified working directory.
 func ExecuteScript(workdir string, lines []string) ([]byte, error) {
-	script := strings.Join(lines, "\n")
+	script := strings.Join(lines, "")
 	cmd := exec.Command("/bin/sh", "-")
 	cmd.Dir = workdir
 	cmd.Stdin = strings.NewReader(script)
@@ -185,8 +192,8 @@ func filterFailures(executed []ExecutedCommand) (failures []ExecutedCommand) {
 		err := cmd.ActualExitCode != cmd.ExpectedExitCode
 		// More expensive check next
 		if !err {
-			actual := strings.Join(cmd.ActualOutput, "\n")
-			expected := strings.Join(cmd.ExpectedOutput, "\n")
+			actual := strings.Join(cmd.ActualOutput, "")
+			expected := strings.Join(cmd.ExpectedOutput, "")
 			err = actual != expected
 		}
 		if err {
@@ -230,7 +237,7 @@ func Process(tempdir, path string) (result Result, err error) {
 	}
 
 	failures := filterFailures(executed)
-	result = Result{executed, strings.Join(lines, "\n"),
+	result = Result{executed, strings.Join(lines, ""),
 		failures}
 	return
 }
