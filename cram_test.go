@@ -1,12 +1,35 @@
 package cram
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestDropEol(t *testing.T) {
+	var tests = []struct {
+		input    string
+		expected string
+	}{
+		{"", ""},
+		{"\n", ""},
+		{"\r\n", ""},
+		{"foo", "foo"},
+		{"foo\n", "foo"},
+		{"foo\r\n", "foo"},
+		{"foo\nbar", "foo\nbar"},
+		{"foo\r\nbar", "foo\r\nbar"},
+	}
+
+	for _, test := range tests {
+		actual := DropEol(test.input)
+		assert.Equal(t, test.expected, actual,
+			fmt.Sprintf("DropEol(%#v)", test.input))
+	}
+}
 
 func TestParseEmpty(t *testing.T) {
 	buf := strings.NewReader("")

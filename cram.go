@@ -37,6 +37,20 @@ type Result struct {
 	Failures []ExecutedCommand // Failed commands.
 }
 
+// DropEol removes a final end-of-line from s. It removes both Unix ("\n")
+// and DOS ("\r\n") end-of-line characters.
+func DropEol(s string) string {
+	l := len(s)
+	if l == 0 || s[l-1] != '\n' {
+		return s
+	}
+	drop := 1
+	if l > 1 && s[l-2] == '\r' {
+		drop = 2
+	}
+	return s[:l-drop]
+}
+
 // updateExitCode looks at the last line of output and updates exit
 // code if it is of the form [n]. The exit code line is only required
 // for non-zero exit codes.
