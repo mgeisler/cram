@@ -28,7 +28,6 @@ type Command struct {
 	CmdLine          string   // Command line passed to the shell.
 	ExpectedOutput   []string // Expected output lines.
 	ExpectedExitCode int      // Expected exit code.
-	Path             string   // Test file.
 	Lineno           int      // Line number of first output line.
 }
 
@@ -111,7 +110,6 @@ func ParseTest(r io.Reader, path string) (test Test, err error) {
 			cmd := Command{
 				CmdLine: line,
 				Lineno:  lineno + 1,
-				Path:    path,
 			}
 			test.Cmds = append(test.Cmds, cmd)
 			state = inCommand

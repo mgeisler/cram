@@ -59,8 +59,8 @@ func TestParseNoOutput(t *testing.T) {
 	cmds := test.Cmds
 	assert.NoError(err)
 	if assert.Len(cmds, 2) {
-		assert.Equal(Command{"touch foo\n", nil, 0, "<string>", 2}, cmds[0])
-		assert.Equal(Command{"touch bar\n", nil, 0, "<string>", 3}, cmds[1])
+		assert.Equal(Command{"touch foo\n", nil, 0, 2}, cmds[0])
+		assert.Equal(Command{"touch bar\n", nil, 0, 3}, cmds[1])
 	}
 }
 
@@ -81,12 +81,12 @@ func TestParseCommands(t *testing.T) {
 		assert.Equal(Command{
 			"echo \"hello\\nworld\"\n",
 			[]string{"hello\n", "world\n"},
-			0, "<string>", 2,
+			0, 2,
 		}, cmds[0])
 		assert.Equal(Command{
 			"echo goodbye\n",
 			[]string{"goodbye\n"},
-			0, "<string>", 5,
+			0, 5,
 		}, cmds[1])
 	}
 }
@@ -120,19 +120,19 @@ Mixture of commands and output:
 	cmds := test.Cmds
 	if assert.Len(cmds, 5) {
 		assert.Equal(Command{
-			"false\n", []string{}, 1, "<string>", 4},
+			"false\n", []string{}, 1, 4},
 			cmds[0])
 		assert.Equal(Command{
-			"echo hello; false\n", []string{"hello\n"}, 1, "<string>", 9},
+			"echo hello; false\n", []string{"hello\n"}, 1, 9},
 			cmds[1])
 		assert.Equal(Command{
-			"false\n", []string{}, 1, "<string>", 15},
+			"false\n", []string{}, 1, 15},
 			cmds[2])
 		assert.Equal(Command{
-			"true\n", nil, 0, "<string>", 17},
+			"true\n", nil, 0, 17},
 			cmds[3])
 		assert.Equal(Command{
-			"echo hello; false\n", []string{"hello\n"}, 1, "<string>", 18},
+			"echo hello; false\n", []string{"hello\n"}, 1, 18},
 			cmds[4])
 	}
 }
@@ -149,8 +149,8 @@ func TestMakeScript(t *testing.T) {
 	u, err := uuid.FromString("123456781234abcd1234123412345678")
 	assert.NoError(t, err)
 	cmds := []Command{
-		{"ls", nil, 0, "<string>", 0},
-		{"touch foo.txt", nil, 0, "<string>", 0},
+		{"ls", nil, 0, 0},
+		{"touch foo.txt", nil, 0, 0},
 	}
 	lines := MakeScript(cmds, MakeBanner(u))
 	banner := "echo \"--- CRAM 12345678-1234-abcd-1234-123412345678 --- $?\"\n"
@@ -164,8 +164,8 @@ func TestMakeScript(t *testing.T) {
 
 func TestParseOutputEmpty(t *testing.T) {
 	cmds := []Command{
-		{"touch foo", nil, 0, "<string>", 0},
-		{"touch bar", nil, 0, "<string>", 0},
+		{"touch foo", nil, 0, 0},
+		{"touch bar", nil, 0, 0},
 	}
 	banner := "--- CRAM 12345678-1234-abcd-1234-123412345678 ---"
 	output := []byte(`--- CRAM 12345678-1234-abcd-1234-123412345678 --- 0
@@ -184,8 +184,8 @@ func TestParseOutputEmpty(t *testing.T) {
 
 func TestParseOutput(t *testing.T) {
 	cmds := []Command{
-		{"echo foo", []string{"foo"}, 0, "<string>", 0},
-		{"echo bar", []string{"bar"}, 0, "<string>", 0},
+		{"echo foo", []string{"foo"}, 0, 0},
+		{"echo bar", []string{"bar"}, 0, 0},
 	}
 	banner := "--- CRAM 12345678-1234-abcd-1234-123412345678 ---"
 	output := []byte(`foo
