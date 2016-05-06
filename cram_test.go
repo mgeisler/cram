@@ -33,18 +33,20 @@ func TestDropEol(t *testing.T) {
 
 func TestParseEmpty(t *testing.T) {
 	buf := strings.NewReader("")
-	cmds, err := ParseTest(buf, "<string>")
+	test, err := ParseTest(buf, "<string>")
 
 	assert.NoError(t, err)
-	assert.Len(t, cmds, 0)
+	assert.Equal(t, test.Path, "<string>")
+	assert.Len(t, test.Cmds, 0)
 }
 
 func TestParseCommentaryOnly(t *testing.T) {
 	buf := strings.NewReader("This file only has\nsome commentary.\n")
-	cmds, err := ParseTest(buf, "<string>")
+	test, err := ParseTest(buf, "<string>")
 
 	assert.NoError(t, err)
-	assert.Len(t, cmds, 0)
+	assert.Equal(t, test.Path, "<string>")
+	assert.Len(t, test.Cmds, 0)
 }
 
 func TestParseNoOutput(t *testing.T) {
@@ -53,7 +55,8 @@ func TestParseNoOutput(t *testing.T) {
   $ touch foo
   $ touch bar
 `)
-	cmds, err := ParseTest(buf, "<string>")
+	test, err := ParseTest(buf, "<string>")
+	cmds := test.Cmds
 	assert.NoError(err)
 	if assert.Len(cmds, 2) {
 		assert.Equal(Command{"touch foo\n", nil, 0, "<string>", 2}, cmds[0])
@@ -70,9 +73,10 @@ func TestParseCommands(t *testing.T) {
   $ echo goodbye
   goodbye
 `)
-	cmds, err := ParseTest(buf, "<string>")
+	test, err := ParseTest(buf, "<string>")
 	assert.NoError(err)
 
+	cmds := test.Cmds
 	if assert.Len(cmds, 2) {
 		assert.Equal(Command{
 			"echo \"hello\\nworld\"\n",
@@ -110,9 +114,10 @@ Mixture of commands and output:
   hello
   [1]
 `)
-	cmds, err := ParseTest(buf, "<string>")
+	test, err := ParseTest(buf, "<string>")
 	assert.NoError(err)
 
+	cmds := test.Cmds
 	if assert.Len(cmds, 5) {
 		assert.Equal(Command{
 			"false\n", []string{}, 1, "<string>", 4},

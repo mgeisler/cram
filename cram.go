@@ -19,6 +19,11 @@ const (
 	outputPrefix  = "  "
 )
 
+type Test struct {
+	Path string    // Path to test file.
+	Cmds []Command // Commands.
+}
+
 type Command struct {
 	CmdLine          string   // Command line passed to the shell.
 	ExpectedOutput   []string // Expected output lines.
@@ -78,13 +83,14 @@ func updateExitCode(cmd *Command) {
 }
 
 // Parse splits an input test file into Commands.
-func ParseTest(r io.Reader, path string) (cmds []Command, err error) {
+func ParseTest(r io.Reader, path string) (test Test, err error) {
 	const (
 		inCommentary = iota
 		inCommand
 		inOutput
 	)
 
+	test.Path = path
 	reader := bufio.NewReader(r)
 	state := inCommentary
 	lineno := 0
@@ -94,7 +100,7 @@ func ParseTest(r io.Reader, path string) (cmds []Command, err error) {
 		switch {
 		case strings.HasPrefix(line, commandPrefix):
 			if state == inOutput {
-				updateExitCode(&cmds[len(cmds)-1])
+				updateExitCode(&test.Cmds[len(test.Cmds)-1])
 			}
 			line = line[len(commandPrefix):]
 			cmd := Command{
@@ -102,23 +108,23 @@ func ParseTest(r io.Reader, path string) (cmds []Command, err error) {
 				Lineno:  lineno + 1,
 				Path:    path,
 			}
-			cmds = append(cmds, cmd)
+			test.Cmds = append(test.Cmds, cmd)
 			state = inCommand
 		case strings.HasPrefix(line, outputPrefix):
 			line = line[len(outputPrefix):]
-			cmd := &cmds[len(cmds)-1]
+			cmd := &test.Cmds[len(test.Cmds)-1]
 			cmd.ExpectedOutput = append(cmd.ExpectedOutput, line)
 			state = inOutput
 		default:
 			if state == inOutput {
-				updateExitCode(&cmds[len(cmds)-1])
+				updateExitCode(&test.Cmds[len(test.Cmds)-1])
 			}
 			state = inCommentary
 		}
 		lineno++
 	}
 	if state == inOutput {
-		updateExitCode(&cmds[len(cmds)-1])
+		updateExitCode(&test.Cmds[len(test.Cmds)-1])
 	}
 	if err == io.EOF {
 		err = nil
@@ -247,7 +253,7 @@ func Process(tempdir, path string) (result Result, err error) {
 		return
 	}
 	defer fp.Close()
-	commands, err := ParseTest(fp, path)
+	test, err := ParseTest(fp, path)
 	if err != nil {
 		return
 	}
@@ -260,14 +266,14 @@ func Process(tempdir, path string) (result Result, err error) {
 
 	u := uuid.NewV4()
 	banner := MakeBanner(u)
-	lines := MakeScript(commands, banner)
+	lines := MakeScript(test.Cmds, banner)
 
 	output, err := ExecuteScript(workdir, lines)
 	if err != nil {
 		return
 	}
 
-	executed, err := ParseOutput(commands, output, banner)
+	executed, err := ParseOutput(test.Cmds, output, banner)
 	if err != nil {
 		return
 	}
