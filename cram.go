@@ -38,10 +38,15 @@ type ExecutedCommand struct {
 	ActualExitCode int      // Exit code.
 }
 
-type Result struct {
-	Commands []ExecutedCommand // The executed commands.
-	Script   string            // The script passed to the shell.
-	Failures []ExecutedCommand // Failed commands.
+// ExecutedTest captures the executed commands, the script sent to the
+// shell and the failed commands. The Test struct is embedded as a
+// value instead of pointer to make the zero value for ExecutedTest
+// immediatedly useful.
+type ExecutedTest struct {
+	Test
+	ExecutedCmds []ExecutedCommand // All executed commands.
+	Script       string            // The script passed to the shell.
+	Failures     []ExecutedCommand // Failed commands.
 }
 
 // DropEol removes a final end-of-line from s. It removes both Unix ("\n")
@@ -247,7 +252,7 @@ func Patch(r io.Reader, w io.Writer, cmds []ExecutedCommand) (err error) {
 
 // Process parses a .t file, executes the test commands and compares
 // the actual output to the expected output.
-func Process(tempdir, path string) (result Result, err error) {
+func Process(tempdir, path string) (result ExecutedTest, err error) {
 	fp, err := os.Open(path)
 	if err != nil {
 		return
@@ -279,7 +284,7 @@ func Process(tempdir, path string) (result Result, err error) {
 	}
 
 	failures := filterFailures(executed)
-	result = Result{executed, strings.Join(lines, ""),
+	result = ExecutedTest{test, executed, strings.Join(lines, ""),
 		failures}
 	return
 }

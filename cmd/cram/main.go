@@ -69,7 +69,7 @@ func run(ctx *cli.Context) {
 			fmt.Fprintln(os.Stderr, result.Script)
 		}
 
-		cmdCount += len(result.Commands)
+		cmdCount += len(result.Cmds)
 
 		switch {
 		case err != nil:
