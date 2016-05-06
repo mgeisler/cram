@@ -203,6 +203,42 @@ func filterFailures(executed []ExecutedCommand) (failures []ExecutedCommand) {
 	return
 }
 
+// Patch takes an ExecutedTest, a slice ExecutedCommands and returns
+// the patched output where ActualOutput from each ExecutedCommand
+// replaces the ExpectedOutput.
+func Patch(r io.Reader, w io.Writer, cmds []ExecutedCommand) (err error) {
+	reader := bufio.NewReader(r)
+	writer := bufio.NewWriter(w)
+
+	lines := []string{}
+	line := ""
+	for err == nil {
+		line, err = reader.ReadString('\n')
+		lines = append(lines, line)
+	}
+	if err == io.EOF {
+		err = nil
+	}
+
+	output := []string{}
+	lastLineno := 0
+
+	for _, cmd := range cmds {
+		pre := lines[lastLineno:cmd.Lineno]
+		output = append(output, pre...)
+		output = append(output, "  "+strings.Join(cmd.ActualOutput, "  "))
+		lastLineno = cmd.Lineno + len(cmd.ExpectedOutput)
+	}
+	post := lines[lastLineno:]
+	output = append(output, post...)
+
+	for _, line := range output {
+		_, err = writer.WriteString(line)
+	}
+	err = writer.Flush()
+	return
+}
+
 // Process parses a .t file, executes the test commands and compares
 // the actual output to the expected output.
 func Process(tempdir, path string) (result Result, err error) {
