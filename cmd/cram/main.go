@@ -31,19 +31,21 @@ func booleanPrompt(prompt string) (bool, error) {
 	}
 }
 
-func showFailures(failures []cram.ExecutedCommand) {
-	for _, cmd := range failures {
-		fmt.Printf("When executing %+#v, got\n", cram.DropEol(cmd.CmdLine))
-		if cmd.ActualExitCode != cmd.ExpectedExitCode {
-			fmt.Printf("  exit code %d, but expected %d\n",
-				cmd.ActualExitCode, cmd.ExpectedExitCode)
-		} else {
-			actual := cram.DropEol(strings.Join(cmd.ActualOutput, "  "))
-			expected := cram.DropEol(strings.Join(cmd.ExpectedOutput, "  "))
+func showFailures(tests []cram.ExecutedTest) {
+	for _, test := range tests {
+		for _, cmd := range test.Failures {
+			fmt.Printf("When executing %+#v, got\n", cram.DropEol(cmd.CmdLine))
+			if cmd.ActualExitCode != cmd.ExpectedExitCode {
+				fmt.Printf("  exit code %d, but expected %d\n",
+					cmd.ActualExitCode, cmd.ExpectedExitCode)
+			} else {
+				actual := cram.DropEol(strings.Join(cmd.ActualOutput, "  "))
+				expected := cram.DropEol(strings.Join(cmd.ExpectedOutput, "  "))
 
-			fmt.Println(" ", actual)
-			fmt.Println("but expected")
-			fmt.Println(" ", expected)
+				fmt.Println(" ", actual)
+				fmt.Println("but expected")
+				fmt.Println(" ", expected)
+			}
 		}
 	}
 }
@@ -60,7 +62,7 @@ func run(ctx *cli.Context) {
 	}
 
 	errors, cmdCount := 0, 0
-	failures := []cram.ExecutedCommand{}
+	failures := []cram.ExecutedTest{}
 
 	for _, path := range ctx.Args() {
 		result, err := cram.Process(tempdir, path)
@@ -78,7 +80,7 @@ func run(ctx *cli.Context) {
 			errors++
 		case len(result.Failures) > 0:
 			fmt.Print("F")
-			failures = append(failures, result.Failures...)
+			failures = append(failures, result)
 		default:
 			fmt.Print(".")
 		}
