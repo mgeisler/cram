@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -10,21 +11,90 @@ import (
 	"github.com/mgeisler/cram"
 )
 
-func showFailures(failures []cram.ExecutedCommand) {
-	for _, cmd := range failures {
-		fmt.Printf("When executing %+#v, got\n", cmd.CmdLine)
-		if cmd.ActualExitCode != cmd.ExpectedExitCode {
-			fmt.Printf("  exit code %d, but expected %d\n",
-				cmd.ActualExitCode, cmd.ExpectedExitCode)
-		} else {
-			actual := strings.Join(cmd.ActualOutput, "\n  ")
-			expected := strings.Join(cmd.ExpectedOutput, "\n  ")
+// We use a single, shared reader of os.Stdin to avoid losing data due
+// to buffering. If we create a new reader every time we need to read
+// a line of text, the reader will read "too much" (it buffers) and we
+// will lose the buffered data when we create a new reader. This is
+// visible when trying to answer two prompts using
+//
+//   $ echo "x\ny" | cram --interactive
+var stdinReader = bufio.NewReader(os.Stdin)
 
-			fmt.Println(" ", actual)
-			fmt.Println("but expected")
-			fmt.Println(" ", expected)
+func booleanPrompt(prompt string) (bool, error) {
+	for {
+		fmt.Print(prompt, " ")
+		answer, err := stdinReader.ReadString('\n')
+		if err != nil {
+			return false, err
+		}
+		answer = strings.ToLower(strings.TrimSpace(answer))
+		switch answer {
+		case "y", "yes":
+			return true, nil
+		case "n", "no":
+			return false, nil
+		default:
+			fmt.Println("Please answer 'yes' or 'no'")
 		}
 	}
+}
+
+func processFailures(tests []cram.ExecutedTest, interactive bool) (
+	err error) {
+
+	for _, test := range tests {
+		var needPatching []cram.ExecutedCommand
+
+		for _, cmd := range test.Failures {
+			fmt.Printf("When executing %+#v, got\n", cram.DropEol(cmd.CmdLine))
+			if cmd.ActualExitCode != cmd.ExpectedExitCode {
+				fmt.Printf("  exit code %d, but expected %d\n",
+					cmd.ActualExitCode, cmd.ExpectedExitCode)
+			} else {
+				actual := cram.DropEol(strings.Join(cmd.ActualOutput, "  "))
+				expected := cram.DropEol(strings.Join(cmd.ExpectedOutput, "  "))
+
+				fmt.Println(" ", actual)
+				fmt.Println("but expected")
+				fmt.Println(" ", expected)
+
+				if interactive {
+					accept, e := booleanPrompt("Accept changed output?")
+					if e != nil {
+						err = e
+						return
+					}
+					if accept {
+						needPatching = append(needPatching, cmd)
+					}
+				}
+			}
+		}
+
+		if needPatching != nil {
+			input, e := os.Open(test.Path)
+			if err = e; err != nil {
+				return
+			}
+
+			outPath := test.Path + ".patched"
+			output, e := os.Create(outPath)
+			if err = e; err != nil {
+				return
+			}
+			err = cram.Patch(input, output, needPatching)
+			if err != nil {
+				return
+			}
+			err = os.Rename(outPath, test.Path)
+			if err != nil {
+				return
+			}
+			fmt.Println("Patched", test.Path)
+		}
+
+	}
+	return
 }
 
 func run(ctx *cli.Context) {
@@ -39,7 +109,7 @@ func run(ctx *cli.Context) {
 	}
 
 	errors, cmdCount := 0, 0
-	failures := []cram.ExecutedCommand{}
+	failures := []cram.ExecutedTest{}
 
 	for _, path := range ctx.Args() {
 		result, err := cram.Process(tempdir, path)
@@ -48,7 +118,7 @@ func run(ctx *cli.Context) {
 			fmt.Fprintln(os.Stderr, result.Script)
 		}
 
-		cmdCount += len(result.Commands)
+		cmdCount += len(result.Cmds)
 
 		switch {
 		case err != nil:
@@ -57,14 +127,14 @@ func run(ctx *cli.Context) {
 			errors++
 		case len(result.Failures) > 0:
 			fmt.Print("F")
-			failures = append(failures, result.Failures...)
+			failures = append(failures, result)
 		default:
 			fmt.Print(".")
 		}
 	}
 	fmt.Print("\n")
 
-	showFailures(failures)
+	processFailures(failures, ctx.GlobalBool("interactive"))
 
 	fmt.Printf("# Ran %d tests (%d commands), %d errors, %d failures.\n",
 		len(ctx.Args()), cmdCount, errors, len(failures))
@@ -83,6 +153,10 @@ func main() {
 	app := cli.NewApp()
 	app.Action = run
 	app.Flags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "interactive",
+			Usage: "interactively update test file on failure",
+		},
 		cli.BoolFlag{
 			Name:  "debug",
 			Usage: "output debug information",
