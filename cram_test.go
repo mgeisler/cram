@@ -40,6 +40,14 @@ func TestParseEmpty(t *testing.T) {
 	assert.Len(t, test.Cmds, 0)
 }
 
+func TestParseOutputOnly(t *testing.T) {
+	buf := strings.NewReader("\n\n  \n")
+	test, err := ParseTest(buf, "<string>")
+
+	assert.EqualError(t, err, `<string>:2: Output line "  \n" has not command.`)
+	assert.Len(t, test.Cmds, 0)
+}
+
 func TestParseCommentaryOnly(t *testing.T) {
 	buf := strings.NewReader("This file only has\nsome commentary.\n")
 	test, err := ParseTest(buf, "<string>")

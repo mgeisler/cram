@@ -19,6 +19,16 @@ const (
 	outputPrefix  = "  "
 )
 
+type InvalidTestError struct {
+	Path   string // Path to test file.
+	Lineno int    // Line number of failure
+	Msg    string // Error message
+}
+
+func (e *InvalidTestError) Error() string {
+	return fmt.Sprintf("%s:%d: %s", e.Path, e.Lineno, e.Msg)
+}
+
 type Test struct {
 	Path string    // Path to test file.
 	Cmds []Command // Commands.
@@ -114,6 +124,11 @@ func ParseTest(r io.Reader, path string) (test Test, err error) {
 			test.Cmds = append(test.Cmds, cmd)
 			state = inCommand
 		case strings.HasPrefix(line, outputPrefix):
+			if state == inCommentary {
+				err = &InvalidTestError{path, lineno,
+					fmt.Sprintf("Output line %q has not command.", line)}
+				return
+			}
 			line = line[len(outputPrefix):]
 			cmd := &test.Cmds[len(test.Cmds)-1]
 			cmd.ExpectedOutput = append(cmd.ExpectedOutput, line)
