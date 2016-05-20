@@ -126,7 +126,7 @@ func ParseTest(r io.Reader, path string) (test Test, err error) {
 		case strings.HasPrefix(line, outputPrefix):
 			if state == inCommentary {
 				err = &InvalidTestError{path, lineno,
-					fmt.Sprintf("Output line %q has no command.", line)}
+					fmt.Sprintf("Output line %q has no command", line)}
 				return
 			}
 			line = line[len(outputPrefix):]

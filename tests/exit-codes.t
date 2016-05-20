@@ -3,7 +3,7 @@ Cram will normally exit with a status of 0 to indicate success:
   $ touch empty.t
   $ cram empty.t
   .
-  # Ran 1 tests (0 commands), 0 errors, 0 failures.
+  # Ran 1 tests (0 commands), 0 errors, 0 failures
 
 Test failures set the exit code to 1:
 
@@ -14,7 +14,7 @@ Test failures set the exit code to 1:
     foo
   but expected
     
-  # Ran 2 tests (1 commands), 0 errors, 1 failures.
+  # Ran 2 tests (1 commands), 0 errors, 1 failures
   [1]
 
 If an error occurs, the error is shown, the error count incremented,
@@ -27,7 +27,7 @@ and the exit code is set to 2:
     foo
   but expected
     
-  # Ran 3 tests (1 commands), 1 errors, 1 failures.
+  # Ran 3 tests (1 commands), 1 errors, 1 failures
   [2]
 
 A command with no output can also have a non-zero exit code:
@@ -47,5 +47,5 @@ Mismatches in exit codes are shown in the Cram output:
   F
   When executing "false", got
     exit code 1, but expected 0
-  # Ran 1 tests (1 commands), 0 errors, 1 failures.
+  # Ran 1 tests (1 commands), 0 errors, 1 failures
   [1]

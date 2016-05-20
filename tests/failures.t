@@ -8,5 +8,5 @@ Cram shows the failed command with the actual and expected output:
     foo
   but expected
     bar
-  # Ran 1 tests (1 commands), 0 errors, 1 failures.
+  # Ran 1 tests (1 commands), 0 errors, 1 failures
   [1]
