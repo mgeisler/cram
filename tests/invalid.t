@@ -20,3 +20,12 @@ a commentary line:
   E
   # Ran 1 tests (0 commands), 1 errors, 0 failures.
   [2]
+
+Parse invalid file with no final newline:
+
+  $ echo -n '  ' > test.t
+  $ cram test.t
+  test.t:0: Output line "  " has not command.
+  E
+  # Ran 1 tests (0 commands), 1 errors, 0 failures.
+  [2]
