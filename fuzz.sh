@@ -22,6 +22,7 @@ for path in tests/fuzz/crashers/*.quoted; do
         cat "$path"
         echo "Output:"
         cat "${path%.quoted}.output"
+        echo
     fi
 done
 
