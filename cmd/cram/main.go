@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
+	"github.com/kylelemons/godebug/diff"
 	"github.com/mgeisler/cram"
 )
 
@@ -46,17 +47,24 @@ func processFailures(tests []cram.ExecutedTest, interactive bool) (
 		var needPatching []cram.ExecutedCommand
 
 		for _, cmd := range test.Failures {
-			fmt.Printf("When executing %+#v, got\n", cram.DropEol(cmd.CmdLine))
+			fmt.Printf("When executing %+#v,", cram.DropEol(cmd.CmdLine))
 			if cmd.ActualExitCode != cmd.ExpectedExitCode {
-				fmt.Printf("  exit code %d, but expected %d\n",
-					cmd.ActualExitCode, cmd.ExpectedExitCode)
+				fmt.Printf(" exit code changed from %d to %d\n",
+					cmd.ExpectedExitCode, cmd.ActualExitCode)
 			} else {
-				actual := cram.DropEol(strings.Join(cmd.ActualOutput, "  "))
-				expected := cram.DropEol(strings.Join(cmd.ExpectedOutput, "  "))
-
-				fmt.Println(" ", actual)
-				fmt.Println("but expected")
-				fmt.Println(" ", expected)
+				fmt.Println(" output changed:")
+				chunks := diff.DiffChunks(cmd.ExpectedOutput, cmd.ActualOutput)
+				for _, chunk := range chunks {
+					for _, line := range chunk.Added {
+						fmt.Printf("+%s", line)
+					}
+					for _, line := range chunk.Deleted {
+						fmt.Printf("-%s", line)
+					}
+					for _, line := range chunk.Equal {
+						fmt.Printf(" %s", line)
+					}
+				}
 
 				if interactive {
 					accept, e := booleanPrompt("Accept changed output?")

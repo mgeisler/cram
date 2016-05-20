@@ -13,10 +13,9 @@ a time:
 
   $ echo y | cram --interactive test.t
   F
-  When executing "echo foo", got
-    foo
-  but expected
-    bar
+  When executing "echo foo", output changed:
+  -bar
+  +foo
   Accept changed output? Patched test.t
   # Ran 1 tests (1 commands), 0 errors, 1 failures
   [1]
@@ -40,18 +39,15 @@ Here we accept the 'foo' and 'baz' outputs:
 
   $ echo "y\nn\ny" | cram --interactive multiple.t
   F
-  When executing "echo foo", got
-    foo
-  but expected
-    first
-  Accept changed output? When executing "echo bar", got
-    bar
-  but expected
-    second
-  Accept changed output? When executing "echo baz", got
-    baz
-  but expected
-    third
+  When executing "echo foo", output changed:
+  -first
+  +foo
+  Accept changed output? When executing "echo bar", output changed:
+  -second
+  +bar
+  Accept changed output? When executing "echo baz", output changed:
+  -third
+  +baz
   Accept changed output? Patched multiple.t
   # Ran 1 tests (3 commands), 0 errors, 1 failures
   [1]
@@ -69,10 +65,9 @@ again:
 
   $ echo something else | cram --interactive multiple.t
   F
-  When executing "echo bar", got
-    bar
-  but expected
-    second
+  When executing "echo bar", output changed:
+  -second
+  +bar
   Accept changed output? Please answer 'yes' or 'no'
   Accept changed output? # Ran 1 tests (3 commands), 0 errors, 1 failures
   [1]
