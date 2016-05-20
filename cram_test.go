@@ -44,7 +44,7 @@ func TestParseOutputOnly(t *testing.T) {
 	buf := strings.NewReader("\n\n  \n")
 	test, err := ParseTest(buf, "<string>")
 
-	assert.EqualError(t, err, `<string>:2: Output line "  \n" has not command.`)
+	assert.EqualError(t, err, `<string>:2: Output line "  \n" has no command`)
 	assert.Len(t, test.Cmds, 0)
 }
 

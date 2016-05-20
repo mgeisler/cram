@@ -3,7 +3,7 @@ The --interactive flag does nothing if there are no test failures:
   $ touch empty.t
   $ cram --interactive empty.t
   .
-  # Ran 1 tests (0 commands), 0 errors, 0 failures.
+  # Ran 1 tests (0 commands), 0 errors, 0 failures
 
 When there are test failures, you're prompted to accept changes one at
 a time:
@@ -18,7 +18,7 @@ a time:
   but expected
     bar
   Accept changed output? Patched test.t
-  # Ran 1 tests (1 commands), 0 errors, 1 failures.
+  # Ran 1 tests (1 commands), 0 errors, 1 failures
   [1]
 
 Patching updates the original .t file:
@@ -53,7 +53,7 @@ Here we accept the 'foo' and 'baz' outputs:
   but expected
     third
   Accept changed output? Patched multiple.t
-  # Ran 1 tests (3 commands), 0 errors, 1 failures.
+  # Ran 1 tests (3 commands), 0 errors, 1 failures
   [1]
 
   $ cat multiple.t
@@ -74,7 +74,7 @@ again:
   but expected
     second
   Accept changed output? Please answer 'yes' or 'no'
-  Accept changed output? # Ran 1 tests (3 commands), 0 errors, 1 failures.
+  Accept changed output? # Ran 1 tests (3 commands), 0 errors, 1 failures
   [1]
 
 The file was not updated in this case:

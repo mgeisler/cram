@@ -136,7 +136,7 @@ func run(ctx *cli.Context) {
 
 	processFailures(failures, ctx.GlobalBool("interactive"))
 
-	fmt.Printf("# Ran %d tests (%d commands), %d errors, %d failures.\n",
+	fmt.Printf("# Ran %d tests (%d commands), %d errors, %d failures\n",
 		len(ctx.Args()), cmdCount, errors, len(failures))
 
 	switch {

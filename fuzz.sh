@@ -7,7 +7,7 @@ go get -v github.com/dvyukov/go-fuzz/go-fuzz-build
 echo "Instrumenting Cram"
 go-fuzz-build github.com/mgeisler/cram/tests/fuzz
 
-mkdir tests/fuzz/corpus
+mkdir -p tests/fuzz/corpus
 cp tests/*.t tests/fuzz/corpus
 
 echo "Starting fuzz test"
@@ -22,6 +22,7 @@ for path in tests/fuzz/crashers/*.quoted; do
         cat "$path"
         echo "Output:"
         cat "${path%.quoted}.output"
+        echo
     fi
 done
 

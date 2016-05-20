@@ -4,3 +4,6 @@
 
 cram.test
 *-fuzz.zip
+tests/fuzz/corpus/
+tests/fuzz/crashers/
+tests/fuzz/suppressions/
