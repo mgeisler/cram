@@ -47,34 +47,41 @@ func processFailures(tests []cram.ExecutedTest, interactive bool) (
 		var needPatching []cram.ExecutedCommand
 
 		for _, cmd := range test.Failures {
-			fmt.Printf("When executing %+#v,", cram.DropEol(cmd.CmdLine))
-			if cmd.ActualExitCode != cmd.ExpectedExitCode {
-				fmt.Printf(" exit code changed from %d to %d\n",
-					cmd.ExpectedExitCode, cmd.ActualExitCode)
-			} else {
-				fmt.Println(" output changed:")
-				chunks := diff.DiffChunks(cmd.ExpectedOutput, cmd.ActualOutput)
-				for _, chunk := range chunks {
-					for _, line := range chunk.Added {
-						fmt.Printf("+%s", line)
-					}
-					for _, line := range chunk.Deleted {
-						fmt.Printf("-%s", line)
-					}
-					for _, line := range chunk.Equal {
-						fmt.Printf(" %s", line)
-					}
-				}
+			fmt.Printf("When executing %+#v:\n", cram.DropEol(cmd.CmdLine))
 
-				if interactive {
-					accept, e := booleanPrompt("Accept changed output?")
-					if e != nil {
-						err = e
-						return
-					}
-					if accept {
-						needPatching = append(needPatching, cmd)
-					}
+			expected := cmd.ExpectedOutput
+			actual := cmd.ActualOutput
+
+			if cmd.ActualExitCode != 0 {
+				line := fmt.Sprintf("[%d]\n", cmd.ActualExitCode)
+				actual = append(actual, line)
+			}
+			if cmd.ExpectedExitCode != 0 {
+				line := fmt.Sprintf("[%d]\n", cmd.ExpectedExitCode)
+				expected = append(expected, line)
+			}
+
+			chunks := diff.DiffChunks(expected, actual)
+			for _, chunk := range chunks {
+				for _, line := range chunk.Added {
+					fmt.Printf("+%s", line)
+				}
+				for _, line := range chunk.Deleted {
+					fmt.Printf("-%s", line)
+				}
+				for _, line := range chunk.Equal {
+					fmt.Printf(" %s", line)
+				}
+			}
+
+			if interactive {
+				accept, e := booleanPrompt("Accept this change?")
+				if e != nil {
+					err = e
+					return
+				}
+				if accept {
+					needPatching = append(needPatching, cmd)
 				}
 			}
 		}

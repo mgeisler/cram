@@ -250,8 +250,32 @@ func Patch(r io.Reader, w io.Writer, cmds []ExecutedCommand) (err error) {
 	for _, cmd := range cmds {
 		pre := lines[lastLineno:cmd.Lineno]
 		output = append(output, pre...)
-		output = append(output, "  "+strings.Join(cmd.ActualOutput, "  "))
+		for _, outputLine := range cmd.ActualOutput {
+			output = append(output, "  "+outputLine)
+		}
 		lastLineno = cmd.Lineno + len(cmd.ExpectedOutput)
+
+		if cmd.ActualExitCode != cmd.ExpectedExitCode {
+			// Add a line with the actual exit code, but only if it is
+			// non-zero since [0] is implied.
+			if cmd.ActualExitCode != 0 {
+				line := fmt.Sprintf("  [%d]\n", cmd.ActualExitCode)
+				output = append(output, line)
+			}
+
+			// Figure out if we should skip a line in the input file.
+			// We should only skip a line if we are overwriting the
+			// expected exit code -- we should not skip a line if we
+			// merely added the actual exit code.
+			if lastLineno < len(lines) {
+				lastLine := lines[lastLineno]
+				line := fmt.Sprintf("  [%d]", cmd.ExpectedExitCode)
+				// Extra whitespace on the exit code line is okay.
+				if strings.HasPrefix(lastLine, line) {
+					lastLineno++
+				}
+			}
+		}
 	}
 	post := lines[lastLineno:]
 	output = append(output, post...)
