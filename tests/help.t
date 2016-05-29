@@ -18,3 +18,7 @@ Cram comes with builtin help:
      --help, -h     show help
      --version, -v  print the version
      
+The traditional --version flag also works:
+
+  $ cram --version
+  cram version 0.0.0
