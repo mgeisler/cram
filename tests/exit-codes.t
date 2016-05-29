@@ -8,7 +8,7 @@ Cram will normally exit with a status of 0 to indicate success:
 Test failures set the exit code to 1:
 
   $ echo '  $ echo foo' >> extra-output.t
-  $ cram *.t
+  $ cram -j 1 *.t
   .F
   When executing "echo foo":
   +foo
@@ -18,7 +18,7 @@ Test failures set the exit code to 1:
 If an error occurs, the error is shown, the error count incremented,
 and the exit code is set to 2:
 
-  $ cram does-not-exist.t *.t
+  $ cram -j 1 does-not-exist.t *.t
   open does-not-exist.t: no such file or directory
   E.F
   When executing "echo foo":
