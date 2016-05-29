@@ -165,25 +165,25 @@ func run(ctx *cli.Context) {
 	}()
 
 	for i := 0; i < len(ctx.Args()); i++ {
-		processResult := <-results
-		result := processResult.Test
-		err := processResult.Err
+		result := <-results
+		test := result.Test
+		err := result.Err
 
 		if ctx.GlobalBool("debug") {
-			fmt.Fprintf(os.Stderr, "# %s\n", result.Path)
-			fmt.Fprintln(os.Stderr, result.Script)
+			fmt.Fprintf(os.Stderr, "# %s\n", test.Path)
+			fmt.Fprintln(os.Stderr, test.Script)
 		}
 
-		cmdCount += len(result.Cmds)
+		cmdCount += len(test.Cmds)
 
 		switch {
 		case err != nil:
 			fmt.Fprintln(os.Stderr, err)
 			fmt.Print("E")
 			errors++
-		case len(result.Failures) > 0:
+		case len(test.Failures) > 0:
 			fmt.Print("F")
-			failures = append(failures, result)
+			failures = append(failures, test)
 		default:
 			fmt.Print(".")
 		}
