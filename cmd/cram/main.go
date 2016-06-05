@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/codegangsta/cli"
@@ -112,6 +113,12 @@ func processFailures(tests []cram.ExecutedTest, interactive bool) (
 	return
 }
 
+// Wrapper for the return type of cram.Process.
+type processResult struct {
+	Test cram.ExecutedTest
+	Err  error
+}
+
 func run(ctx *cli.Context) {
 	tempdir, err := ioutil.TempDir("", "cram-")
 	if err != nil {
@@ -126,23 +133,57 @@ func run(ctx *cli.Context) {
 	errors, cmdCount := 0, 0
 	failures := []cram.ExecutedTest{}
 
-	for _, path := range ctx.Args() {
-		result, err := cram.Process(tempdir, path)
+	// Number of goroutines to process the test files. We default to 2
+	// times the number of cores.
+	parallelism := ctx.GlobalInt("jobs")
+	if parallelism <= 0 {
+		parallelism = 2 * runtime.NumCPU()
+	}
+	if parallelism > len(ctx.Args()) {
+		parallelism = len(ctx.Args())
+	}
+
+	// Input and result channels with space for a few items before we
+	// block.
+	paths := make(chan string, 8)
+	results := make(chan processResult, 8)
+
+	for i := 0; i < parallelism; i++ {
+		go func() {
+			for path := range paths {
+				result, err := cram.Process(tempdir, path)
+				results <- processResult{result, err}
+			}
+		}()
+	}
+
+	go func() {
+		for _, path := range ctx.Args() {
+			paths <- path
+		}
+		close(paths)
+	}()
+
+	for i := 0; i < len(ctx.Args()); i++ {
+		result := <-results
+		test := result.Test
+		err := result.Err
+
 		if ctx.GlobalBool("debug") {
-			fmt.Fprintf(os.Stderr, "# %s\n", path)
-			fmt.Fprintln(os.Stderr, result.Script)
+			fmt.Fprintf(os.Stderr, "# %s\n", test.Path)
+			fmt.Fprintln(os.Stderr, test.Script)
 		}
 
-		cmdCount += len(result.Cmds)
+		cmdCount += len(test.Cmds)
 
 		switch {
 		case err != nil:
 			fmt.Fprintln(os.Stderr, err)
 			fmt.Print("E")
 			errors++
-		case len(result.Failures) > 0:
+		case len(test.Failures) > 0:
 			fmt.Print("F")
-			failures = append(failures, result)
+			failures = append(failures, test)
 		default:
 			fmt.Print(".")
 		}
@@ -179,6 +220,10 @@ func main() {
 		cli.BoolFlag{
 			Name:  "keep-tmp",
 			Usage: "keep temporary directory after executing tests",
+		},
+		cli.IntFlag{
+			Name:  "jobs, j",
+			Usage: "number of tests to run in parallel",
 		},
 	}
 	app.Run(os.Args)
