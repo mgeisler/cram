@@ -15,7 +15,6 @@ build:
     - cat gotest.out
     - go-junit-report < gotest.out > shippable/testresults/gotest.xml
     - go vet ./...
-    - cram tests/*.t
 
     # Fuzz testing
     - 'if [ "$SHIPPABLE_GO_VERSION" = "1.6" ]; then ./fuzz.sh; fi'
