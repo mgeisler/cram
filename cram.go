@@ -58,6 +58,17 @@ type ExecutedTest struct {
 	Failures     []ExecutedCommand // Failed commands.
 }
 
+// failed indicates if the actual exit code or output differed from
+// what was expected.
+func (cmd *ExecutedCommand) failed() bool {
+	if cmd.ActualExitCode != cmd.ExpectedExitCode {
+		return true
+	}
+	actual := strings.Join(cmd.ActualOutput, "")
+	expected := strings.Join(cmd.ExpectedOutput, "")
+	return actual != expected
+}
+
 // DropEol removes a final end-of-line from s. It removes both Unix ("\n")
 // and DOS ("\r\n") end-of-line characters.
 func DropEol(s string) string {
@@ -212,15 +223,7 @@ func ExecuteScript(workdir string, lines []string) ([]byte, error) {
 
 func filterFailures(executed []ExecutedCommand) (failures []ExecutedCommand) {
 	for _, cmd := range executed {
-		// Quick check first
-		err := cmd.ActualExitCode != cmd.ExpectedExitCode
-		// More expensive check next
-		if !err {
-			actual := strings.Join(cmd.ActualOutput, "")
-			expected := strings.Join(cmd.ExpectedOutput, "")
-			err = actual != expected
-		}
-		if err {
+		if cmd.failed() {
 			failures = append(failures, cmd)
 		}
 	}
