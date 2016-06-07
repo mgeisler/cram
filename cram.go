@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,8 @@ import (
 const (
 	commandPrefix = "  $ "
 	outputPrefix  = "  "
+
+	reSuffix = " (re)"
 )
 
 type InvalidTestError struct {
@@ -68,7 +71,28 @@ func (cmd *ExecutedCommand) failed() bool {
 		return true
 	}
 	for i, actual := range cmd.ActualOutput {
-		if actual != cmd.ExpectedOutput[i] {
+		expected := cmd.ExpectedOutput[i]
+		// Always accept an exact match, even if the line might end
+		// with (re). This means that such lines need no escaping in
+		// the test file and are quick to match.
+		if actual == expected {
+			continue
+		}
+
+		// The following tests ignore EOLs.
+		actual = DropEol(actual)
+		expected = DropEol(expected)
+
+		switch {
+		case strings.HasSuffix(expected, reSuffix):
+			pattern := "^(?:" + expected[:len(expected)-len(reSuffix)] + ")$"
+			matched, err := regexp.MatchString(pattern, actual)
+			if err != nil || !matched {
+				return true
+			}
+		default:
+			// No special suffix, not equal by the check above => we
+			// found a change in the output.
 			return true
 		}
 	}

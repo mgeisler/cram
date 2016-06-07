@@ -38,15 +38,39 @@ func TestExecutedCommandFailed(t *testing.T) {
 		ExpectedExitCode: 0,
 		Lineno:           1,
 	}
+	re := Command{
+		CmdLine:          "cat foo.txt",
+		ExpectedOutput:   []string{"hello +world (re)\n"},
+		ExpectedExitCode: 0,
+		Lineno:           1,
+	}
+	badPattern := Command{
+		CmdLine:          "cat foo.txt",
+		ExpectedOutput:   []string{"* (re)\n"},
+		ExpectedExitCode: 0,
+		Lineno:           1,
+	}
 
 	var tests = []struct {
 		cmd      ExecutedCommand
 		expected bool
 	}{
+		// Simple output lines.
 		{ExecutedCommand{&cmd, []string{"bar\n", "foo\n"}, 0}, false},
 		{ExecutedCommand{&cmd, []string{"bar\n", "foo\n"}, 42}, true},
 		{ExecutedCommand{&cmd, []string{"new", "output"}, 0}, true},
 		{ExecutedCommand{&cmd, []string{"more", "lines"}, 0}, true},
+
+		// Regular expressions.
+		{ExecutedCommand{&re, []string{"hello +world (re)\n"}, 0}, false},
+		{ExecutedCommand{&re, []string{"hello world\n"}, 0}, false},
+		{ExecutedCommand{&re, []string{"hello world"}, 0}, false},
+		{ExecutedCommand{&re, []string{"hello   world"}, 0}, false},
+		{ExecutedCommand{&re, []string{"hello_world"}, 0}, true},
+		{ExecutedCommand{&re, []string{"!hello world"}, 0}, true},
+		{ExecutedCommand{&re, []string{"hello world!"}, 0}, true},
+		{ExecutedCommand{&re, []string{"hello +world"}, 0}, true},
+		{ExecutedCommand{&badPattern, []string{"..."}, 0}, true},
 	}
 
 	for _, test := range tests {
