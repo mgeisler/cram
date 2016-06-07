@@ -31,6 +31,31 @@ func TestDropEol(t *testing.T) {
 	}
 }
 
+func TestExecutedCommandFailed(t *testing.T) {
+	cmd := Command{
+		CmdLine:          "ls",
+		ExpectedOutput:   []string{"bar\n", "foo\n"},
+		ExpectedExitCode: 0,
+		Lineno:           1,
+	}
+
+	var tests = []struct {
+		cmd      ExecutedCommand
+		expected bool
+	}{
+		{ExecutedCommand{&cmd, []string{"bar\n", "foo\n"}, 0}, false},
+		{ExecutedCommand{&cmd, []string{"bar\n", "foo\n"}, 42}, true},
+		{ExecutedCommand{&cmd, []string{"new", "output"}, 0}, true},
+		{ExecutedCommand{&cmd, []string{"more", "lines"}, 0}, true},
+	}
+
+	for _, test := range tests {
+		assert.Equal(t, test.expected, test.cmd.failed(),
+			fmt.Sprintf("output: %q, exit code: %d",
+				test.cmd.ActualOutput, test.cmd.ActualExitCode))
+	}
+}
+
 func TestParseEmpty(t *testing.T) {
 	buf := strings.NewReader("")
 	test, err := ParseTest(buf, "<string>")
