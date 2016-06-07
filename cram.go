@@ -64,9 +64,15 @@ func (cmd *ExecutedCommand) failed() bool {
 	if cmd.ActualExitCode != cmd.ExpectedExitCode {
 		return true
 	}
-	actual := strings.Join(cmd.ActualOutput, "")
-	expected := strings.Join(cmd.ExpectedOutput, "")
-	return actual != expected
+	if len(cmd.ActualOutput) != len(cmd.ExpectedOutput) {
+		return true
+	}
+	for i, actual := range cmd.ActualOutput {
+		if actual != cmd.ExpectedOutput[i] {
+			return true
+		}
+	}
+	return false
 }
 
 // DropEol removes a final end-of-line from s. It removes both Unix ("\n")
