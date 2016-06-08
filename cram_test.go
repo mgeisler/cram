@@ -77,6 +77,13 @@ func TestExecutedCommandFailed(t *testing.T) {
 		Lineno:           1,
 	}
 
+	glob := Command{
+		CmdLine:          "ls",
+		ExpectedOutput:   []string{"*.jpg (glob)\n"},
+		ExpectedExitCode: 0,
+		Lineno:           1,
+	}
+
 	var tests = []struct {
 		cmd      ExecutedCommand
 		expected bool
@@ -97,6 +104,13 @@ func TestExecutedCommandFailed(t *testing.T) {
 		{ExecutedCommand{&re, []string{"hello world!"}, 0}, true},
 		{ExecutedCommand{&re, []string{"hello +world"}, 0}, true},
 		{ExecutedCommand{&badPattern, []string{"..."}, 0}, true},
+
+		// Glob patterns.
+		{ExecutedCommand{&glob, []string{"*.jpg (glob)\n"}, 0}, false},
+		{ExecutedCommand{&glob, []string{"foo.jpg\n"}, 0}, false},
+		{ExecutedCommand{&glob, []string{"foo.jpg"}, 0}, false},
+		{ExecutedCommand{&glob, []string{"foo.jpg  "}, 0}, true},
+		{ExecutedCommand{&glob, []string{"quuz.png"}, 0}, true},
 	}
 
 	for _, test := range tests {

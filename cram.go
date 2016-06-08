@@ -137,6 +137,11 @@ func (cmd *ExecutedCommand) failed() bool {
 			if !matchEntireLine(pattern, actual) {
 				return true
 			}
+		case strings.HasSuffix(expected, globSuffix):
+			pattern := expected[:len(expected)-len(globSuffix)]
+			if !matchEntireLine(globToRegexp(pattern), actual) {
+				return true
+			}
 		default:
 			// No special suffix, not equal by the check above => we
 			// found a change in the output.
