@@ -260,6 +260,8 @@ func MakeScript(cmds []Command, banner string) (lines []string) {
 	return
 }
 
+// ParseOutput finds the actual output and exit codes for a slice of
+// commands. The result is a slice of executed commands.
 func ParseOutput(cmds []Command, output []byte, banner string) (
 	executed []ExecutedCommand, err error) {
 	r := bytes.NewReader(output)
