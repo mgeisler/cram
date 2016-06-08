@@ -70,6 +70,45 @@ func matchEntireLine(pattern, line string) bool {
 	return err == nil && matched
 }
 
+// globToRegexp translates a glob pattern into the corresponding
+// regular expression. We cannnot simply use filepath.Match since we
+// want "*" to match a sequence of any character instead of stopping
+// at "/" (or "\\" on Windows). Also, filepath.Match has a quirk where
+// there is no escaping on Windows.
+func globToRegexp(pattern string) string {
+	regexpMeta := `\.+*?()|[]{}^$`
+	buf := make([]byte, 2*len(pattern))
+	j := 0
+Loop:
+	for i := 0; i < len(pattern); i++ {
+		switch pattern[i] {
+		case '?':
+			buf[j] = '.'
+		case '*':
+			buf[j], buf[j+1] = '.', '*'
+			j++
+		case '\\':
+			// Skip over the backslash
+			i++
+			if i == len(pattern) {
+				break Loop
+			}
+			// If we didn't break, add the next character to buf as a
+			// literal.
+			fallthrough
+		default:
+			// Escape character is necessary
+			if strings.IndexByte(regexpMeta, pattern[i]) >= 0 {
+				buf[j] = '\\'
+				j++
+			}
+			buf[j] = pattern[i]
+		}
+		j++
+	}
+	return string(buf[:j])
+}
+
 // failed indicates if the actual exit code or output differed from
 // what was expected.
 func (cmd *ExecutedCommand) failed() bool {

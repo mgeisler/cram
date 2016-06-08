@@ -31,6 +31,32 @@ func TestDropEol(t *testing.T) {
 	}
 }
 
+func TestGlobToRegexp(t *testing.T) {
+	var tests = []struct {
+		input    string
+		expected string
+	}{
+		{``, ``},
+		{`foo`, `foo`},
+		{`foo*`, `foo.*`},
+		{`foo?`, `foo.`},
+		{`a.b`, `a\.b`},
+		{`a..b`, `a\.\.b`},
+		{`a\*b`, `a\*b`},
+		{`a\?b`, `a\?b`},
+		{`a\\*b`, `a\\.*b`},
+		{`x\`, `x`},
+		{`x\x`, `xx`},
+		{`x\n`, `xn`},
+	}
+
+	for _, test := range tests {
+		actual := globToRegexp(test.input)
+		assert.Equal(t, test.expected, actual,
+			fmt.Sprintf("globToRegexp(%#v)", test.input))
+	}
+}
+
 func TestExecutedCommandFailed(t *testing.T) {
 	cmd := Command{
 		CmdLine:          "ls",
