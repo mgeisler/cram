@@ -19,7 +19,8 @@ const (
 	commandPrefix = "  $ "
 	outputPrefix  = "  "
 
-	reSuffix = " (re)"
+	reSuffix   = " (re)"
+	globSuffix = " (glob)"
 )
 
 type InvalidTestError struct {
@@ -61,6 +62,14 @@ type ExecutedTest struct {
 	Failures     []ExecutedCommand // Failed commands.
 }
 
+// matchEntireLine returns true exactly when pattern can be compiled
+// and matches all of line.
+func matchEntireLine(pattern, line string) bool {
+	pattern = "^(?:" + pattern + ")$"
+	matched, err := regexp.MatchString(pattern, line)
+	return err == nil && matched
+}
+
 // failed indicates if the actual exit code or output differed from
 // what was expected.
 func (cmd *ExecutedCommand) failed() bool {
@@ -85,9 +94,8 @@ func (cmd *ExecutedCommand) failed() bool {
 
 		switch {
 		case strings.HasSuffix(expected, reSuffix):
-			pattern := "^(?:" + expected[:len(expected)-len(reSuffix)] + ")$"
-			matched, err := regexp.MatchString(pattern, actual)
-			if err != nil || !matched {
+			pattern := expected[:len(expected)-len(reSuffix)]
+			if !matchEntireLine(pattern, actual) {
 				return true
 			}
 		default:
