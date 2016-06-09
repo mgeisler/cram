@@ -146,7 +146,7 @@ Mixture of commands and output:
 }
 
 func TestMakeScriptEmpty(t *testing.T) {
-	u, err := uuid.FromString("123456781234abcd1234123412345678")
+	u, err := uuid.FromString("12345678-abcd-1234-abcd-123412345678")
 	assert.NoError(t, err)
 	cmds := []Command{}
 	lines := MakeScript(cmds, MakeBanner(u))
@@ -154,14 +154,14 @@ func TestMakeScriptEmpty(t *testing.T) {
 }
 
 func TestMakeScript(t *testing.T) {
-	u, err := uuid.FromString("123456781234abcd1234123412345678")
+	u, err := uuid.FromString("12345678-abcd-1234-abcd-123412345678")
 	assert.NoError(t, err)
 	cmds := []Command{
 		{"ls", nil, 0, 0},
 		{"touch foo.txt", nil, 0, 0},
 	}
 	lines := MakeScript(cmds, MakeBanner(u))
-	banner := "echo \"--- CRAM 12345678-1234-abcd-1234-123412345678 --- $?\"\n"
+	banner := "echo \"--- CRAM 12345678-abcd-1234-abcd-123412345678 --- $?\"\n"
 	if assert.Len(t, lines, 4) {
 		assert.Equal(t, "ls", lines[0])
 		assert.Equal(t, banner, lines[1])
@@ -175,9 +175,9 @@ func TestParseOutputEmpty(t *testing.T) {
 		{"touch foo", nil, 0, 0},
 		{"touch bar", nil, 0, 0},
 	}
-	banner := "--- CRAM 12345678-1234-abcd-1234-123412345678 ---"
-	output := []byte(`--- CRAM 12345678-1234-abcd-1234-123412345678 --- 0
---- CRAM 12345678-1234-abcd-1234-123412345678 --- 1
+	banner := "--- CRAM 12345678-abcd-1234-abcd-123412345678 ---"
+	output := []byte(`--- CRAM 12345678-abcd-1234-abcd-123412345678 --- 0
+--- CRAM 12345678-abcd-1234-abcd-123412345678 --- 1
 `)
 
 	executed, err := ParseOutput(cmds, output, banner)
@@ -195,11 +195,11 @@ func TestParseOutput(t *testing.T) {
 		{"echo foo", []string{"foo"}, 0, 0},
 		{"echo bar", []string{"bar"}, 0, 0},
 	}
-	banner := "--- CRAM 12345678-1234-abcd-1234-123412345678 ---"
+	banner := "--- CRAM 12345678-abcd-1234-abcd-123412345678 ---"
 	output := []byte(`foo
---- CRAM 12345678-1234-abcd-1234-123412345678 --- 0
+--- CRAM 12345678-abcd-1234-abcd-123412345678 --- 0
 bar
---- CRAM 12345678-1234-abcd-1234-123412345678 --- 1
+--- CRAM 12345678-abcd-1234-abcd-123412345678 --- 1
 `)
 
 	executed, err := ParseOutput(cmds, output, banner)
