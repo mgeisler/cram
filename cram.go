@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,9 @@ import (
 const (
 	commandPrefix = "  $ "
 	outputPrefix  = "  "
+
+	reSuffix   = " (re)"
+	globSuffix = " (glob)"
 )
 
 type InvalidTestError struct {
@@ -56,6 +60,95 @@ type ExecutedTest struct {
 	ExecutedCmds []ExecutedCommand // All executed commands.
 	Script       string            // The script passed to the shell.
 	Failures     []ExecutedCommand // Failed commands.
+}
+
+// matchEntireLine returns true exactly when pattern can be compiled
+// and matches all of line.
+func matchEntireLine(pattern, line string) bool {
+	pattern = "^(?:" + pattern + ")$"
+	matched, err := regexp.MatchString(pattern, line)
+	return err == nil && matched
+}
+
+// globToRegexp translates a glob pattern into the corresponding
+// regular expression. We cannnot simply use filepath.Match since we
+// want "*" to match a sequence of any character instead of stopping
+// at "/" (or "\\" on Windows). Also, filepath.Match has a quirk where
+// there is no escaping on Windows.
+func globToRegexp(pattern string) string {
+	regexpMeta := `\.+*?()|[]{}^$`
+	buf := make([]byte, 2*len(pattern))
+	j := 0
+Loop:
+	for i := 0; i < len(pattern); i++ {
+		switch pattern[i] {
+		case '?':
+			buf[j] = '.'
+		case '*':
+			buf[j], buf[j+1] = '.', '*'
+			j++
+		case '\\':
+			// Skip over the backslash
+			i++
+			if i == len(pattern) {
+				break Loop
+			}
+			// If we didn't break, add the next character to buf as a
+			// literal.
+			fallthrough
+		default:
+			// Escape character is necessary
+			if strings.IndexByte(regexpMeta, pattern[i]) >= 0 {
+				buf[j] = '\\'
+				j++
+			}
+			buf[j] = pattern[i]
+		}
+		j++
+	}
+	return string(buf[:j])
+}
+
+// failed indicates if the actual exit code or output differed from
+// what was expected.
+func (cmd *ExecutedCommand) failed() bool {
+	if cmd.ActualExitCode != cmd.ExpectedExitCode {
+		return true
+	}
+	if len(cmd.ActualOutput) != len(cmd.ExpectedOutput) {
+		return true
+	}
+	for i, actual := range cmd.ActualOutput {
+		expected := cmd.ExpectedOutput[i]
+		// Always accept an exact match, even if the line might end
+		// with (re). This means that such lines need no escaping in
+		// the test file and are quick to match.
+		if actual == expected {
+			continue
+		}
+
+		// The following tests ignore EOLs.
+		actual = DropEol(actual)
+		expected = DropEol(expected)
+
+		switch {
+		case strings.HasSuffix(expected, reSuffix):
+			pattern := expected[:len(expected)-len(reSuffix)]
+			if !matchEntireLine(pattern, actual) {
+				return true
+			}
+		case strings.HasSuffix(expected, globSuffix):
+			pattern := expected[:len(expected)-len(globSuffix)]
+			if !matchEntireLine(globToRegexp(pattern), actual) {
+				return true
+			}
+		default:
+			// No special suffix, not equal by the check above => we
+			// found a change in the output.
+			return true
+		}
+	}
+	return false
 }
 
 // DropEol removes a final end-of-line from s. It removes both Unix ("\n")
@@ -167,6 +260,8 @@ func MakeScript(cmds []Command, banner string) (lines []string) {
 	return
 }
 
+// ParseOutput finds the actual output and exit codes for a slice of
+// commands. The result is a slice of executed commands.
 func ParseOutput(cmds []Command, output []byte, banner string) (
 	executed []ExecutedCommand, err error) {
 	r := bytes.NewReader(output)
@@ -212,15 +307,7 @@ func ExecuteScript(workdir string, lines []string) ([]byte, error) {
 
 func filterFailures(executed []ExecutedCommand) (failures []ExecutedCommand) {
 	for _, cmd := range executed {
-		// Quick check first
-		err := cmd.ActualExitCode != cmd.ExpectedExitCode
-		// More expensive check next
-		if !err {
-			actual := strings.Join(cmd.ActualOutput, "")
-			expected := strings.Join(cmd.ExpectedOutput, "")
-			err = actual != expected
-		}
-		if err {
+		if cmd.failed() {
 			failures = append(failures, cmd)
 		}
 	}
