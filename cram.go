@@ -261,14 +261,14 @@ func ParseTest(r io.Reader, path string) (test Test, err error) {
 // MakeBanner turns a UUID into a nice banner we can recognize later
 // in the output.
 func MakeBanner(u uuid.UUID) string {
-	return "--- CRAM " + u.String() + " ---"
+	return u.String() + " ---"
 }
 
 // MakeScript produces a script ready to be sent to a shell. The
 // banner should be a random string. It will be inserted in the output
 // together with the exit status of each command.
 func MakeScript(cmds []Command, banner string) (lines []string) {
-	echo := fmt.Sprintf("echo \"%s $?\"\n", banner)
+	echo := fmt.Sprintf("echo \"--- CRAM $? %s\"\n", banner)
 	for _, cmd := range cmds {
 		lines = append(lines, cmd.CmdLine, echo)
 	}
@@ -282,13 +282,16 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 	r := bytes.NewReader(output)
 	reader := bufio.NewReader(r)
 
+	banner = banner + "\n"
 	i := 0
 	actualOutput := []string{}
 	line := ""
 	for err == nil {
 		line, err = reader.ReadString('\n')
-		if strings.HasPrefix(line, banner) {
-			number := DropEol(line[len(banner)+1:])
+		if strings.HasSuffix(line, banner) {
+			// Cut off space, banner, and final newline.
+			line = line[:len(line)-len(banner)-1]
+			number := line[stringsLastIndexByte(line, ' ')+1:]
 			exitCode, e := strconv.Atoi(number)
 			if e != nil {
 				err = e

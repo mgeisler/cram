@@ -254,7 +254,7 @@ func TestMakeScript(t *testing.T) {
 		{"touch foo.txt", nil, 0, 0},
 	}
 	lines := MakeScript(cmds, MakeBanner(u))
-	banner := "echo \"--- CRAM 12345678-abcd-1234-abcd-123412345678 --- $?\"\n"
+	banner := "echo \"--- CRAM $? 12345678-abcd-1234-abcd-123412345678 ---\"\n"
 	if assert.Len(t, lines, 4) {
 		assert.Equal(t, "ls", lines[0])
 		assert.Equal(t, banner, lines[1])
@@ -268,9 +268,9 @@ func TestParseOutputEmpty(t *testing.T) {
 		{"touch foo", nil, 0, 0},
 		{"touch bar", nil, 0, 0},
 	}
-	banner := "--- CRAM 12345678-abcd-1234-abcd-123412345678 ---"
-	output := []byte(`--- CRAM 12345678-abcd-1234-abcd-123412345678 --- 0
---- CRAM 12345678-abcd-1234-abcd-123412345678 --- 1
+	banner := "12345678-abcd-1234-abcd-123412345678 ---"
+	output := []byte(`--- CRAM 0 12345678-abcd-1234-abcd-123412345678 ---
+--- CRAM 1 12345678-abcd-1234-abcd-123412345678 ---
 `)
 
 	executed, err := ParseOutput(cmds, output, banner)
@@ -288,11 +288,11 @@ func TestParseOutput(t *testing.T) {
 		{"echo foo", []string{"foo"}, 0, 0},
 		{"echo bar", []string{"bar"}, 0, 0},
 	}
-	banner := "--- CRAM 12345678-abcd-1234-abcd-123412345678 ---"
+	banner := "12345678-abcd-1234-abcd-123412345678 ---"
 	output := []byte(`foo
---- CRAM 12345678-abcd-1234-abcd-123412345678 --- 0
+--- CRAM 0 12345678-abcd-1234-abcd-123412345678 ---
 bar
---- CRAM 12345678-abcd-1234-abcd-123412345678 --- 1
+--- CRAM 1 12345678-abcd-1234-abcd-123412345678 ---
 `)
 
 	executed, err := ParseOutput(cmds, output, banner)
