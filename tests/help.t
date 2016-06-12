@@ -2,7 +2,7 @@ Cram comes with builtin help:
 
   $ cram --help
   NAME:
-     cram - A new cli application
+     cram - command line test framework
   
   USAGE:
      cram [global options] command [command options] [arguments...]

@@ -207,6 +207,7 @@ func run(ctx *cli.Context) {
 
 func main() {
 	app := cli.NewApp()
+	app.Usage = "command line test framework"
 	app.Action = run
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
