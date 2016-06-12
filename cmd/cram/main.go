@@ -134,10 +134,10 @@ func run(ctx *cli.Context) {
 	failures := []cram.ExecutedTest{}
 
 	// Number of goroutines to process the test files. We default to 2
-	// times the number of cores.
+	// times the number of cores in the main function below.
 	parallelism := ctx.GlobalInt("jobs")
-	if parallelism <= 0 {
-		parallelism = 2 * runtime.NumCPU()
+	if parallelism < 1 {
+		parallelism = 1
 	}
 	if parallelism > len(ctx.Args()) {
 		parallelism = len(ctx.Args())
