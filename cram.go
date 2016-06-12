@@ -17,6 +17,7 @@ import (
 
 const (
 	commandPrefix = "  $ "
+	continuationPrefix = "  > "
 	outputPrefix  = "  "
 
 	reSuffix   = " (re)"
@@ -216,6 +217,16 @@ func ParseTest(r io.Reader, path string) (test Test, err error) {
 			}
 			test.Cmds = append(test.Cmds, cmd)
 			state = inCommand
+		case strings.HasPrefix(line, continuationPrefix):
+			if state != inCommand {
+				err = &InvalidTestError{path, lineno,
+					fmt.Sprintf("Continuation line %q has no command", line)}
+				return
+			}
+			line = line[len(continuationPrefix):]
+			cmd := &test.Cmds[len(test.Cmds)-1]
+			cmd.CmdLine = cmd.CmdLine + line
+			cmd.Lineno++
 		case strings.HasPrefix(line, outputPrefix):
 			if state == inCommentary {
 				err = &InvalidTestError{path, lineno,

@@ -29,3 +29,12 @@ Parse invalid file with no final newline:
   E
   # Ran 1 tests (0 commands), 1 errors, 0 failures
   [2]
+
+Continuation line with no corresponding command:
+
+  $ echo '  > continued' > test.t
+  $ cram test.t
+  test.t:0: Continuation line "  > continued\n" has no command
+  E
+  # Ran 1 tests (0 commands), 1 errors, 0 failures
+  [2]
