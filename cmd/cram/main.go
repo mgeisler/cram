@@ -224,6 +224,7 @@ func main() {
 		cli.IntFlag{
 			Name:  "jobs, j",
 			Usage: "number of tests to run in parallel",
+			Value: 2 * runtime.NumCPU(),
 		},
 	}
 	app.Run(os.Args)
