@@ -25,10 +25,12 @@ When such a line fails, you get the diff as normal:
 
 The pattern is anchored at the beginning and the end of the line:
 
-  $ echo '  $ echo foobar' >> anchor.t
-  $ echo '  foo (re)'      >> anchor.t
-  $ echo '  $ echo foobar' >> anchor.t
-  $ echo '  bar (re)'      >> anchor.t
+  $ cat > anchor.t << EOM
+  >   $ echo foobar
+  >   foo (re)
+  >   $ echo foobar
+  >   bar (re)
+  > EOM
   $ cram anchor.t
   F
   When executing "echo foobar":

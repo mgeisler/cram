@@ -10,11 +10,12 @@ Parsing a file with an output line before any command lines:
 Parsing a file with a command and with an output line immediated after
 a commentary line:
 
-  $ echo '  $ echo hello'  > test.t
-  $ echo '  hello'        >> test.t
-  $ echo 'Commentary'     >> test.t
-  $ echo '  Output line'  >> test.t
-
+  $ cat > test.t << EOM
+  >   $ echo hello
+  >   hello
+  > Commentary
+  >   Output line
+  > EOM
   $ cram test.t
   test.t:3: Output line "  Output line\n" has no command
   E

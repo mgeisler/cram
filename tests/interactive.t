@@ -28,12 +28,14 @@ Patching updates the original .t file:
 
 When there are multiple failures, you can update just some of them:
 
-  $ echo '  $ echo foo' >> multiple.t
-  $ echo '  first'      >> multiple.t
-  $ echo '  $ echo bar' >> multiple.t
-  $ echo '  second'     >> multiple.t
-  $ echo '  $ echo baz' >> multiple.t
-  $ echo '  third'      >> multiple.t
+  $ cat > multiple.t << EOM
+  >   $ echo foo
+  >   first
+  >   $ echo bar
+  >   second
+  >   $ echo baz
+  >   third
+  > EOM
 
 Here we accept the 'foo' and 'baz' outputs:
 
@@ -84,14 +86,16 @@ The file was not updated in this case:
 
 You will also be prompted to update the exit code:
 
-  $ echo 'Wrong exit code'                  >> exit-code.t
-  $ echo '  $ (exit 7)'                     >> exit-code.t
-  $ echo '  [10]'                           >> exit-code.t
-  $ echo 'Missing non-zero exit code:'      >> exit-code.t
-  $ echo '  $ false'                        >> exit-code.t
-  $ echo 'White-space after the exit code:' >> exit-code.t
-  $ echo '  $ true'                         >> exit-code.t
-  $ echo '  [42]   '                        >> exit-code.t
+  $ cat > exit-code.t << EOM
+  > Wrong exit code
+  >   $ (exit 7)
+  >   [10]
+  > Missing non-zero exit code:
+  >   $ false
+  > White-space after the exit code:
+  >   $ true
+  >   [42]   
+  > EOM
   $ yes | cram --interactive exit-code.t
   F
   When executing "(exit 7)":
