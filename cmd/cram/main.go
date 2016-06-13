@@ -8,9 +8,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/codegangsta/cli"
 	"github.com/kylelemons/godebug/diff"
 	"github.com/mgeisler/cram"
+	"github.com/urfave/cli"
 )
 
 // We use a single, shared reader of os.Stdin to avoid losing data due
