@@ -13,6 +13,7 @@ build:
     - go test -v ./... | tee gotest.out
     - go-junit-report < gotest.out > shippable/testresults/gotest.xml
     - go vet ./...
+    - gofmt -d . | tee gofmt.patch; [ ! -s gofmt.patch ]
 
     # Fuzz testing
     - 'if [ "$SHIPPABLE_GO_VERSION" = "1.6" ]; then ./fuzz.sh; fi'
