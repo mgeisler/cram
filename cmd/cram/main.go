@@ -119,10 +119,11 @@ type processResult struct {
 	Err  error
 }
 
-func run(ctx *cli.Context) {
+func run(ctx *cli.Context) error {
 	tempdir, err := ioutil.TempDir("", "cram-")
 	if err != nil {
-		return
+		msg := "Could not create temp directory: " + err.Error()
+		return cli.NewExitError(msg, 2)
 	}
 	if ctx.GlobalBool("keep-tmp") {
 		fmt.Println("# Temporary directory:", tempdir)
@@ -192,17 +193,16 @@ func run(ctx *cli.Context) {
 
 	processFailures(failures, ctx.GlobalBool("interactive"))
 
-	fmt.Printf("# Ran %d tests (%d commands), %d errors, %d failures\n",
+	msg := fmt.Sprintf("# Ran %d tests (%d commands), %d errors, %d failures",
 		len(ctx.Args()), cmdCount, errors, len(failures))
 
-	switch {
-	case errors > 0:
-		os.Exit(2)
-	case len(failures) > 0:
-		os.Exit(1)
-	default:
-		os.Exit(0)
+	exitCode := 0
+	if errors > 0 {
+		exitCode = 2
+	} else if len(failures) > 0 {
+		exitCode = 1
 	}
+	return cli.NewExitError(msg, exitCode)
 }
 
 func main() {
