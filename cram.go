@@ -386,8 +386,10 @@ func Patch(r io.Reader, w io.Writer, cmds []ExecutedCommand) (err error) {
 }
 
 // Process parses a .t file, executes the test commands and compares
-// the actual output to the expected output.
-func Process(tempdir, path string) (result ExecutedTest, err error) {
+// the actual output to the expected output. The idx passed is used to
+// make the working directory unique inside tempdir and must be
+// different for each test file.
+func Process(tempdir, path string, idx int) (result ExecutedTest, err error) {
 	fp, err := os.Open(path)
 	if err != nil {
 		return
@@ -398,7 +400,11 @@ func Process(tempdir, path string) (result ExecutedTest, err error) {
 		return
 	}
 
-	workdir := filepath.Join(tempdir, filepath.Base(path))
+	// Create unique base inside the tempdir
+	base := fmt.Sprintf("%03d-%s", idx, filepath.Base(path))
+	// Remove file extension (often, but not necessarily ".t")
+	base = base[:len(base)-len(filepath.Ext(base))]
+	workdir := filepath.Join(tempdir, base)
 	err = os.Mkdir(workdir, 0700)
 	if err != nil {
 		return
