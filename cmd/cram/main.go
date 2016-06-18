@@ -146,23 +146,24 @@ func run(ctx *cli.Context) error {
 
 	// Input and result channels with space for a few items before we
 	// block.
-	paths := make(chan string, 8)
+	paths := ctx.Args()
+	indexes := make(chan int, 8)
 	results := make(chan processResult, 8)
 
 	for i := 0; i < parallelism; i++ {
 		go func() {
-			for path := range paths {
-				result, err := cram.Process(tempdir, path)
+			for i := range indexes {
+				result, err := cram.Process(tempdir, paths[i], i)
 				results <- processResult{result, err}
 			}
 		}()
 	}
 
 	go func() {
-		for _, path := range ctx.Args() {
-			paths <- path
+		for i := range paths {
+			indexes <- i
 		}
-		close(paths)
+		close(indexes)
 	}()
 
 	for i := 0; i < len(ctx.Args()); i++ {
