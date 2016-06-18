@@ -402,6 +402,8 @@ func Process(tempdir, path string, idx int) (result ExecutedTest, err error) {
 
 	// Create unique base inside the tempdir
 	base := fmt.Sprintf("%03d-%s", idx, filepath.Base(path))
+	// Remove file extension (often, but not necessarily ".t")
+	base = base[:len(base)-len(filepath.Ext(base))]
 	workdir := filepath.Join(tempdir, base)
 	err = os.Mkdir(workdir, 0700)
 	if err != nil {

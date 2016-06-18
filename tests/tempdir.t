@@ -13,7 +13,7 @@ This test will record the working directory in a file in our $PWD:
 The working directory recorded is indeed inside our $PWD:
 
   $ sed -e "s|^$PWD|<PWD>|" < pwd.txt
-  <PWD>/custom-tmp/cram-*/000-record-pwd.t (glob)
+  <PWD>/custom-tmp/cram-*/000-record-pwd (glob)
 
 The directory is normally deleted after the test has executed:
 
