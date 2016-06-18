@@ -8,9 +8,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/codegangsta/cli"
 	"github.com/kylelemons/godebug/diff"
 	"github.com/mgeisler/cram"
+	"github.com/urfave/cli"
 )
 
 // We use a single, shared reader of os.Stdin to avoid losing data due
@@ -135,10 +135,10 @@ func run(ctx *cli.Context) error {
 	failures := []cram.ExecutedTest{}
 
 	// Number of goroutines to process the test files. We default to 2
-	// times the number of cores.
+	// times the number of cores in the main function below.
 	parallelism := ctx.GlobalInt("jobs")
-	if parallelism <= 0 {
-		parallelism = 2 * runtime.NumCPU()
+	if parallelism < 1 {
+		parallelism = 1
 	}
 	if parallelism > len(ctx.Args()) {
 		parallelism = len(ctx.Args())
@@ -207,6 +207,7 @@ func run(ctx *cli.Context) error {
 
 func main() {
 	app := cli.NewApp()
+	app.Usage = "command line test framework"
 	app.Action = run
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
@@ -224,6 +225,7 @@ func main() {
 		cli.IntFlag{
 			Name:  "jobs, j",
 			Usage: "number of tests to run in parallel",
+			Value: 2 * runtime.NumCPU(),
 		},
 	}
 	app.Run(os.Args)
