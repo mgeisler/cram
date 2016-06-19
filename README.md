@@ -16,5 +16,10 @@ used in a production setting.
 > the basic functionality myself. However, feel free to report bugs
 > for any issues you might find. Thanks! *—Martin Geisler*
 
+## Documentation
+
+Please take a look at [the Cram test suite][tests]. The tests there
+serve as documentation as well as a regression test suite.
 
 [cram]: https://bitheap.org/cram/
+[tests]: tests/
