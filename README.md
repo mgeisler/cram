@@ -11,10 +11,10 @@ their expected output.
 This project is still under development and should probably not be
 used in a production setting.
 
-> The project is my **playground and learning vechicle** for getting
-> familiar with Go. When the basic functionality is implemented, this
-> will be a normal open source project where I would love to see pull
-> requests! *—Martin Geisler*
+> **The project is a learning tool for me to become familiar with the
+> Go language**. I would therefore prefer to experiment and implement
+> the basic functionality myself. However, feel free to report bugs
+> for any issues you might find. Thanks! *—Martin Geisler*
 
 
 [cram]: https://bitheap.org/cram/
