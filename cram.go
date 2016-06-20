@@ -16,9 +16,9 @@ import (
 )
 
 const (
-	commandPrefix = "  $ "
+	commandPrefix      = "  $ "
 	continuationPrefix = "  > "
-	outputPrefix  = "  "
+	outputPrefix       = "  "
 
 	reSuffix   = " (re)"
 	globSuffix = " (glob)"
