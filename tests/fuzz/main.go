@@ -1,3 +1,7 @@
+// Copyright 2016 Martin Geisler <martin@geisler.net>
+//
+// Cram is licensed under the MIT license, see the LICENSE file.
+
 package ParseTest
 
 import (
