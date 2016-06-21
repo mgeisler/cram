@@ -318,9 +318,9 @@ bar--- CRAM 1 12345678-1234-abcd-1234-123412345678 ---
 	executed, err := ParseOutput(cmds, output, banner)
 	assert.NoError(t, err)
 	if assert.Len(t, executed, 2) {
-		assert.Equal(t, []string{"foo"}, executed[0].ActualOutput)
+		assert.Equal(t, []string{"foo (no-eol)\n"}, executed[0].ActualOutput)
 		assert.Equal(t, 0, executed[0].ActualExitCode)
-		assert.Equal(t, []string{"bar"}, executed[1].ActualOutput)
+		assert.Equal(t, []string{"bar (no-eol)\n"}, executed[1].ActualOutput)
 		assert.Equal(t, 1, executed[1].ActualExitCode)
 	}
 }

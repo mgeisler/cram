@@ -24,8 +24,9 @@ const (
 	continuationPrefix = "  > "
 	outputPrefix       = "  "
 
-	reSuffix   = " (re)"
-	globSuffix = " (glob)"
+	reSuffix    = " (re)"
+	globSuffix  = " (glob)"
+	noEolSuffix = " (no-eol)"
 )
 
 type InvalidTestError struct {
@@ -276,7 +277,9 @@ func MakeScript(cmds []Command, banner string) (lines []string) {
 }
 
 // ParseOutput finds the actual output and exit codes for a slice of
-// commands. The result is a slice of executed commands.
+// commands. The result is a slice of executed commands. The actual
+// output is normalized, meaning that a missing final EOL in the
+// output is represented as noEolSuffix.
 func ParseOutput(cmds []Command, output []byte, banner string) (
 	executed []ExecutedCommand, err error) {
 	r := bytes.NewReader(output)
@@ -297,7 +300,7 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 
 			prefix := line[:lastSpace-len("--- CRAM")]
 			if len(prefix) > 0 {
-				actualOutput = append(actualOutput, prefix)
+				actualOutput = append(actualOutput, prefix+noEolSuffix+"\n")
 			}
 
 			number := line[lastSpace+1:]
@@ -367,6 +370,10 @@ func Patch(r io.Reader, w io.Writer, cmds []ExecutedCommand) (err error) {
 		output = append(output, pre...)
 		for _, outputLine := range cmd.ActualOutput {
 			output = append(output, "  "+outputLine)
+		}
+		lastLine := output[len(output)-1]
+		if lastLine[len(lastLine)-1] != '\n' {
+			output[len(output)-1] = lastLine + noEolSuffix + "\n"
 		}
 		lastLineno = cmd.Lineno + len(cmd.ExpectedOutput)
 
