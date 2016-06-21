@@ -289,14 +289,24 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 	for err == nil {
 		line, err = reader.ReadString('\n')
 		if strings.HasSuffix(line, banner) {
-			// Cut off space, banner, and final newline.
+			// Cut off space, banner, and final newline. The line then
+			// looks like "...--- CRAM NN", where "..." can be empty.
 			line = line[:len(line)-len(banner)-1]
-			number := line[stringsLastIndexByte(line, ' ')+1:]
+			// Find space between "--- CRAM" part and exit code.
+			lastSpace := stringsLastIndexByte(line, ' ')
+
+			prefix := line[:lastSpace-len("--- CRAM")]
+			if len(prefix) > 0 {
+				actualOutput = append(actualOutput, prefix)
+			}
+
+			number := line[lastSpace+1:]
 			exitCode, e := strconv.Atoi(number)
 			if e != nil {
 				err = e
 				return
 			}
+
 			executed = append(executed, ExecutedCommand{
 				Command:        &cmds[i],
 				ActualExitCode: exitCode,

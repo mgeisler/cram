@@ -304,3 +304,23 @@ bar
 		assert.Equal(t, 1, executed[1].ActualExitCode)
 	}
 }
+
+func TestParseOutputNoEol(t *testing.T) {
+	cmds := []Command{
+		{"echo -n foo", nil, 0, 0},
+		{"echo -n bar", nil, 0, 0},
+	}
+	banner := "12345678-1234-abcd-1234-123412345678 ---"
+	output := []byte(`foo--- CRAM 0 12345678-1234-abcd-1234-123412345678 ---
+bar--- CRAM 1 12345678-1234-abcd-1234-123412345678 ---
+`)
+
+	executed, err := ParseOutput(cmds, output, banner)
+	assert.NoError(t, err)
+	if assert.Len(t, executed, 2) {
+		assert.Equal(t, []string{"foo"}, executed[0].ActualOutput)
+		assert.Equal(t, 0, executed[0].ActualExitCode)
+		assert.Equal(t, []string{"bar"}, executed[1].ActualOutput)
+		assert.Equal(t, 1, executed[1].ActualExitCode)
+	}
+}
