@@ -5,16 +5,15 @@ go get -v github.com/dvyukov/go-fuzz/go-fuzz
 go get -v github.com/dvyukov/go-fuzz/go-fuzz-build
 
 echo "Instrumenting Cram"
-go-fuzz-build github.com/mgeisler/cram/tests/fuzz
+go-fuzz-build github.com/mgeisler/cram/fuzz/ParseTest
 
-mkdir -p tests/fuzz/corpus
-cp tests/*.t tests/fuzz/corpus
+cp -a tests fuzz/ParseTest/corpus
 
 echo "Starting fuzz test"
-timeout -s INT 25 go-fuzz -bin ParseTest-fuzz.zip -workdir=tests/fuzz
+timeout -s INT 25 go-fuzz -bin ParseTest-fuzz.zip -workdir=fuzz/ParseTest
 
 exit_code=0
-for path in tests/fuzz/crashers/*.quoted; do
+for path in fuzz/ParseTest/crashers/*.quoted; do
     # This test is here to support dash
     if [ -e "$path" ]; then
         exit_code=1
