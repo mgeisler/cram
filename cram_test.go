@@ -254,7 +254,7 @@ func TestMakeScript(t *testing.T) {
 		{"touch foo.txt", nil, 0, 0},
 	}
 	lines := MakeScript(cmds, MakeBanner(u))
-	banner := "echo \"--- CRAM 12345678-abcd-1234-abcd-123412345678 --- $?\"\n"
+	banner := "echo \"--- CRAM $? 12345678-abcd-1234-abcd-123412345678 ---\"\n"
 	if assert.Len(t, lines, 4) {
 		assert.Equal(t, "ls", lines[0])
 		assert.Equal(t, banner, lines[1])
@@ -268,9 +268,9 @@ func TestParseOutputEmpty(t *testing.T) {
 		{"touch foo", nil, 0, 0},
 		{"touch bar", nil, 0, 0},
 	}
-	banner := "--- CRAM 12345678-abcd-1234-abcd-123412345678 ---"
-	output := []byte(`--- CRAM 12345678-abcd-1234-abcd-123412345678 --- 0
---- CRAM 12345678-abcd-1234-abcd-123412345678 --- 1
+	banner := "12345678-abcd-1234-abcd-123412345678 ---"
+	output := []byte(`--- CRAM 0 12345678-abcd-1234-abcd-123412345678 ---
+--- CRAM 1 12345678-abcd-1234-abcd-123412345678 ---
 `)
 
 	executed, err := ParseOutput(cmds, output, banner)
@@ -288,11 +288,11 @@ func TestParseOutput(t *testing.T) {
 		{"echo foo", []string{"foo"}, 0, 0},
 		{"echo bar", []string{"bar"}, 0, 0},
 	}
-	banner := "--- CRAM 12345678-abcd-1234-abcd-123412345678 ---"
+	banner := "12345678-abcd-1234-abcd-123412345678 ---"
 	output := []byte(`foo
---- CRAM 12345678-abcd-1234-abcd-123412345678 --- 0
+--- CRAM 0 12345678-abcd-1234-abcd-123412345678 ---
 bar
---- CRAM 12345678-abcd-1234-abcd-123412345678 --- 1
+--- CRAM 1 12345678-abcd-1234-abcd-123412345678 ---
 `)
 
 	executed, err := ParseOutput(cmds, output, banner)
@@ -301,6 +301,26 @@ bar
 		assert.Equal(t, []string{"foo\n"}, executed[0].ActualOutput)
 		assert.Equal(t, 0, executed[0].ActualExitCode)
 		assert.Equal(t, []string{"bar\n"}, executed[1].ActualOutput)
+		assert.Equal(t, 1, executed[1].ActualExitCode)
+	}
+}
+
+func TestParseOutputNoEol(t *testing.T) {
+	cmds := []Command{
+		{"echo -n foo", nil, 0, 0},
+		{"echo -n bar", nil, 0, 0},
+	}
+	banner := "12345678-1234-abcd-1234-123412345678 ---"
+	output := []byte(`foo--- CRAM 0 12345678-1234-abcd-1234-123412345678 ---
+bar--- CRAM 1 12345678-1234-abcd-1234-123412345678 ---
+`)
+
+	executed, err := ParseOutput(cmds, output, banner)
+	assert.NoError(t, err)
+	if assert.Len(t, executed, 2) {
+		assert.Equal(t, []string{"foo (no-eol)\n"}, executed[0].ActualOutput)
+		assert.Equal(t, 0, executed[0].ActualExitCode)
+		assert.Equal(t, []string{"bar (no-eol)\n"}, executed[1].ActualOutput)
 		assert.Equal(t, 1, executed[1].ActualExitCode)
 	}
 }

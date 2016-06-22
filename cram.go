@@ -24,8 +24,9 @@ const (
 	continuationPrefix = "  > "
 	outputPrefix       = "  "
 
-	reSuffix   = " (re)"
-	globSuffix = " (glob)"
+	reSuffix    = " (re)"
+	globSuffix  = " (glob)"
+	noEolSuffix = " (no-eol)"
 )
 
 type InvalidTestError struct {
@@ -261,14 +262,14 @@ func ParseTest(r io.Reader, path string) (test Test, err error) {
 // MakeBanner turns a UUID into a nice banner we can recognize later
 // in the output.
 func MakeBanner(u uuid.UUID) string {
-	return "--- CRAM " + u.String() + " ---"
+	return u.String() + " ---"
 }
 
 // MakeScript produces a script ready to be sent to a shell. The
 // banner should be a random string. It will be inserted in the output
 // together with the exit status of each command.
 func MakeScript(cmds []Command, banner string) (lines []string) {
-	echo := fmt.Sprintf("echo \"%s $?\"\n", banner)
+	echo := fmt.Sprintf("echo \"--- CRAM $? %s\"\n", banner)
 	for _, cmd := range cmds {
 		lines = append(lines, cmd.CmdLine, echo)
 	}
@@ -276,24 +277,39 @@ func MakeScript(cmds []Command, banner string) (lines []string) {
 }
 
 // ParseOutput finds the actual output and exit codes for a slice of
-// commands. The result is a slice of executed commands.
+// commands. The result is a slice of executed commands. The actual
+// output is normalized, meaning that a missing final EOL in the
+// output is represented as noEolSuffix.
 func ParseOutput(cmds []Command, output []byte, banner string) (
 	executed []ExecutedCommand, err error) {
 	r := bytes.NewReader(output)
 	reader := bufio.NewReader(r)
 
+	banner = banner + "\n"
 	i := 0
 	actualOutput := []string{}
 	line := ""
 	for err == nil {
 		line, err = reader.ReadString('\n')
-		if strings.HasPrefix(line, banner) {
-			number := DropEol(line[len(banner)+1:])
+		if strings.HasSuffix(line, banner) {
+			// Cut off space, banner, and final newline. The line then
+			// looks like "...--- CRAM NN", where "..." can be empty.
+			line = line[:len(line)-len(banner)-1]
+			// Find space between "--- CRAM" part and exit code.
+			lastSpace := stringsLastIndexByte(line, ' ')
+
+			prefix := line[:lastSpace-len("--- CRAM")]
+			if len(prefix) > 0 {
+				actualOutput = append(actualOutput, prefix+noEolSuffix+"\n")
+			}
+
+			number := line[lastSpace+1:]
 			exitCode, e := strconv.Atoi(number)
 			if e != nil {
 				err = e
 				return
 			}
+
 			executed = append(executed, ExecutedCommand{
 				Command:        &cmds[i],
 				ActualExitCode: exitCode,
@@ -354,6 +370,10 @@ func Patch(r io.Reader, w io.Writer, cmds []ExecutedCommand) (err error) {
 		output = append(output, pre...)
 		for _, outputLine := range cmd.ActualOutput {
 			output = append(output, "  "+outputLine)
+		}
+		lastLine := output[len(output)-1]
+		if lastLine[len(lastLine)-1] != '\n' {
+			output[len(output)-1] = lastLine + noEolSuffix + "\n"
 		}
 		lastLineno = cmd.Lineno + len(cmd.ExpectedOutput)
 
