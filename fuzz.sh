@@ -8,6 +8,7 @@ go get -v github.com/dvyukov/go-fuzz/go-fuzz-build
 cp -a tests fuzz/ParseTest/corpus
 
 fuzz_test () {
+    echo
     echo "Preparing $1 fuzz test"
     go-fuzz-build github.com/mgeisler/cram/fuzz/$1
 
@@ -36,5 +37,6 @@ for t in ParseTest; do
     fi
 done
 
+echo
 echo "Exiting with exit code $exit_code"
 exit $exit_code
