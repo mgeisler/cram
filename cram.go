@@ -149,6 +149,17 @@ func (cmd *ExecutedCommand) failed() bool {
 			if !matchEntireLine(globToRegexp(pattern), actual) {
 				return true
 			}
+		case strings.HasSuffix(expected, escSuffix):
+			// The same output can be escaped in multiple differnet
+			// ways by the user: both "x (esc)" and "\x78 (esc)" are
+			// ways of saying "x". We normalize the output by
+			// unescaping and then escaping it. This ensures that the
+			// escaped form is the same as what was applied to the
+			// actual output in ParseOutput.
+			expected, err := Unescape(expected)
+			if err != nil || Escape(expected) != actual {
+				return true
+			}
 		default:
 			// No special suffix, not equal by the check above => we
 			// found a change in the output.
@@ -350,7 +361,8 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 
 			prefix := line[:lastSpace-len("--- CRAM")]
 			if len(prefix) > 0 {
-				actualOutput = append(actualOutput, prefix+noEolSuffix+"\n")
+				line := prefix + noEolSuffix + "\n"
+				actualOutput = append(actualOutput, Escape(line))
 			}
 
 			number := line[lastSpace+1:]
@@ -368,7 +380,7 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 			actualOutput = nil
 			i++
 		} else {
-			actualOutput = append(actualOutput, line)
+			actualOutput = append(actualOutput, Escape(line))
 		}
 	}
 	if err == io.EOF {
