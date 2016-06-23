@@ -27,6 +27,7 @@ const (
 	reSuffix    = " (re)"
 	globSuffix  = " (glob)"
 	noEolSuffix = " (no-eol)"
+	escSuffix   = " (esc)"
 )
 
 type InvalidTestError struct {
@@ -274,6 +275,55 @@ func MakeScript(cmds []Command, banner string) (lines []string) {
 		lines = append(lines, cmd.CmdLine, echo)
 	}
 	return
+}
+
+// Escape quotes non-printable characters in s with a backslash. If
+// anything was changed, " (esc)" is added to the result. A final
+// newline in s (if any) is kept unescaped.
+func Escape(s string) string {
+	trimmed := DropEol(s)
+	quoted := strconv.Quote(trimmed)
+	inner := quoted[1 : len(quoted)-1]
+
+	// strconv.Quote changed `"` to `\"` and `\` to `\\` since it
+	// returns a double quoted string. We want to undo this since both
+	// " and \ are printable and need no escaping in our test files.
+	//
+	// Replacing `\"` with `"` is reversable in Unescape since there
+	// can be no lone occurance of `"` in quoted.
+	cleaned := strings.Replace(inner, `\"`, `"`, -1)
+
+	// We cannot do the same for backslash since we won't be able to
+	// reverse this in Unescape (there will most likely be other
+	// occurances of `\` in quoted). However, we simply need to
+	// determine if replacing `\\` with `\` would give us the string
+	// we started with. If it does, we return s unchanged. If not, the
+	// we leave the `\\` as they are since we will be returning a
+	// string marked with "(esc)" in that case.
+	if strings.Replace(cleaned, `\\`, `\`, -1) == trimmed {
+		return s
+	}
+
+	// Add the " (esc)" suffix followed by the EOL (if any) from the
+	// input string.
+	return cleaned + escSuffix + s[len(trimmed):]
+}
+
+// Unescape is the inverse of Escape. It decodes escaped characters
+// such as \t, \x01, etc in s if s ends with escSuffix.
+func Unescape(s string) (string, error) {
+	trimmed := DropEol(s)
+	if !strings.HasSuffix(trimmed, escSuffix) {
+		return s, nil
+	}
+	withoutMarker := trimmed[:len(trimmed)-len(escSuffix)]
+	escaped := strings.Replace(withoutMarker, `"`, `\"`, -1)
+	quoted := `"` + escaped + `"`
+	unquoted, err := strconv.Unquote(quoted)
+	if err != nil {
+		return "", err
+	}
+	return unquoted + s[len(trimmed):], nil
 }
 
 // ParseOutput finds the actual output and exit codes for a slice of
