@@ -31,7 +31,7 @@ fuzz_test () {
 }
 
 exit_code=0
-for t in ParseTest; do
+for t in ParseTest Escape; do
     if ! fuzz_test $t; then
         exit_code=1
     fi
