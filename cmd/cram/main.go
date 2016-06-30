@@ -6,15 +6,17 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 
+	"github.com/alecthomas/kingpin"
 	"github.com/kylelemons/godebug/diff"
 	"github.com/mgeisler/cram"
-	"github.com/urfave/cli"
 )
 
 // We use a single, shared reader of os.Stdin to avoid losing data due
@@ -123,13 +125,14 @@ type processResult struct {
 	Err  error
 }
 
-func run(ctx *cli.Context) error {
+func run(paths []string, parallelism int,
+	keepTmp, interactive, debug bool) (error, int) {
 	tempdir, err := ioutil.TempDir("", "cram-")
 	if err != nil {
 		msg := "Could not create temp directory: " + err.Error()
-		return cli.NewExitError(msg, 2)
+		return errors.New(msg), 2
 	}
-	if ctx.GlobalBool("keep-tmp") {
+	if keepTmp {
 		fmt.Println("# Temporary directory:", tempdir)
 	} else {
 		defer os.RemoveAll(tempdir)
@@ -140,17 +143,15 @@ func run(ctx *cli.Context) error {
 
 	// Number of goroutines to process the test files. We default to 2
 	// times the number of cores in the main function below.
-	parallelism := ctx.GlobalInt("jobs")
 	if parallelism < 1 {
 		parallelism = 1
 	}
-	if parallelism > len(ctx.Args()) {
-		parallelism = len(ctx.Args())
+	if parallelism > len(paths) {
+		parallelism = len(paths)
 	}
 
 	// Input and result channels with space for a few items before we
 	// block.
-	paths := ctx.Args()
 	indexes := make(chan int, 8)
 	results := make(chan processResult, 8)
 
@@ -170,12 +171,12 @@ func run(ctx *cli.Context) error {
 		close(indexes)
 	}()
 
-	for i := 0; i < len(ctx.Args()); i++ {
+	for i := 0; i < len(paths); i++ {
 		result := <-results
 		test := result.Test
 		err := result.Err
 
-		if ctx.GlobalBool("debug") {
+		if debug {
 			fmt.Fprintf(os.Stderr, "# %s\n", test.Path)
 			fmt.Fprintln(os.Stderr, test.Script)
 		}
@@ -196,10 +197,10 @@ func run(ctx *cli.Context) error {
 	}
 	fmt.Print("\n")
 
-	processFailures(failures, ctx.GlobalBool("interactive"))
+	processFailures(failures, interactive)
 
 	msg := fmt.Sprintf("# Ran %d tests (%d commands), %d errors, %d failures",
-		len(ctx.Args()), cmdCount, errCount, len(failures))
+		len(paths), cmdCount, errCount, len(failures))
 
 	exitCode := 0
 	if errCount > 0 {
@@ -207,31 +208,35 @@ func run(ctx *cli.Context) error {
 	} else if len(failures) > 0 {
 		exitCode = 1
 	}
-	return cli.NewExitError(msg, exitCode)
+	return errors.New(msg), exitCode
 }
 
 func main() {
-	app := cli.NewApp()
-	app.Usage = "command line test framework"
-	app.Action = run
-	app.Flags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "interactive",
-			Usage: "interactively update test file on failure",
-		},
-		cli.BoolFlag{
-			Name:  "debug",
-			Usage: "output debug information",
-		},
-		cli.BoolFlag{
-			Name:  "keep-tmp",
-			Usage: "keep temporary directory after executing tests",
-		},
-		cli.IntFlag{
-			Name:  "jobs, j",
-			Usage: "number of tests to run in parallel",
-			Value: 2 * runtime.NumCPU(),
-		},
+	interactive := kingpin.
+		Flag("interactive", "interactively update test file on failure").
+		Bool()
+	debug := kingpin.
+		Flag("debug", "output debug information").
+		Bool()
+	keepTmp := kingpin.
+		Flag("keep-tmp", "keep temporary directory after executing tests").
+		Bool()
+	jobs := kingpin.
+		Flag("jobs", "number of tests to run in parallel").
+		Short('j').
+		Default(strconv.Itoa(2 * runtime.NumCPU())).
+		Int()
+	paths := kingpin.
+		Arg("path", "test files").
+		Required().
+		Strings()
+
+	kingpin.Version("cram version 0.0.0")
+	kingpin.Parse()
+
+	err, exitCode := run(*paths, *jobs, *keepTmp, *interactive, *debug)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(exitCode)
 	}
-	app.Run(os.Args)
 }
