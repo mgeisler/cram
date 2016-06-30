@@ -11,6 +11,8 @@ Cram comes with builtin help:
      0.0.0
      
   COMMANDS:
+       help, h  Shows a list of commands or help for one command
+  
   GLOBAL OPTIONS:
      --interactive           interactively update test file on failure
      --debug                 output debug information
