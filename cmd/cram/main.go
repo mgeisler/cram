@@ -135,7 +135,7 @@ func run(ctx *cli.Context) error {
 		defer os.RemoveAll(tempdir)
 	}
 
-	errors, cmdCount := 0, 0
+	errCount, cmdCount := 0, 0
 	failures := []cram.ExecutedTest{}
 
 	// Number of goroutines to process the test files. We default to 2
@@ -186,7 +186,7 @@ func run(ctx *cli.Context) error {
 		case err != nil:
 			fmt.Fprintln(os.Stderr, err)
 			fmt.Print("E")
-			errors++
+			errCount++
 		case len(test.Failures) > 0:
 			fmt.Print("F")
 			failures = append(failures, test)
@@ -199,10 +199,10 @@ func run(ctx *cli.Context) error {
 	processFailures(failures, ctx.GlobalBool("interactive"))
 
 	msg := fmt.Sprintf("# Ran %d tests (%d commands), %d errors, %d failures",
-		len(ctx.Args()), cmdCount, errors, len(failures))
+		len(ctx.Args()), cmdCount, errCount, len(failures))
 
 	exitCode := 0
-	if errors > 0 {
+	if errCount > 0 {
 		exitCode = 2
 	} else if len(failures) > 0 {
 		exitCode = 1
