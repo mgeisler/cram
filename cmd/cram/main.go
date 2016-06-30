@@ -214,6 +214,7 @@ func run(paths []string, parallelism int,
 func main() {
 	interactive := kingpin.
 		Flag("interactive", "interactively update test file on failure").
+		Short('i').
 		Bool()
 	debug := kingpin.
 		Flag("debug", "output debug information").

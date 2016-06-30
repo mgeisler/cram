@@ -6,7 +6,7 @@ Cram comes with builtin help:
   Flags:
         --help         Show context-sensitive help (also try --help-long and
                        --help-man).
-        --interactive  interactively update test file on failure
+    -i, --interactive  interactively update test file on failure
         --debug        output debug information
         --keep-tmp     keep temporary directory after executing tests
     -j, --jobs=\d+ +   number of tests to run in parallel (re)
