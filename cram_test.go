@@ -61,6 +61,57 @@ func TestGlobToRegexp(t *testing.T) {
 	}
 }
 
+func TestEscape(t *testing.T) {
+	var tests = []struct {
+		input    string
+		expected string
+	}{
+		{"", ""},
+		{"\n", "\n"},
+		{"foo", "foo"},
+		{"foo\n", "foo\n"},
+		{"café", "café"},
+		{`x " y \ z`, `x " y \ z`},
+		{"\x01\x02\x03", `\x01\x02\x03 (esc)`},
+		{"\x01\x02\x03\n", "\\x01\\x02\\x03 (esc)\n"},
+	}
+
+	for _, test := range tests {
+		actual := Escape(test.input)
+		assert.Equal(t, test.expected, actual,
+			fmt.Sprintf("Escape(%#v)", test.input))
+	}
+}
+
+func TestUnescape(t *testing.T) {
+	var tests = []struct {
+		input    string
+		expected string
+	}{
+		{"", ""},
+		{"\n", "\n"},
+		{"foo", "foo"},
+		{"foo\n", "foo\n"},
+		{"café", "café"},
+		{`x " y \ z`, `x " y \ z`},
+		{`\x01\x02\x03 (esc)`, "\x01\x02\x03"},
+		{"\\x01\\x02\\x03 (esc)\n", "\x01\x02\x03\n"},
+	}
+
+	for _, test := range tests {
+		actual, err := Unescape(test.input)
+		assert.NoError(t, err)
+		assert.Equal(t, test.expected, actual,
+			fmt.Sprintf("Unescape(%#v)", test.input))
+	}
+}
+
+func TestUnescapeError(t *testing.T) {
+	unescaped, err := Unescape(`foo \ bar (esc)`)
+	assert.Error(t, err)
+	assert.Equal(t, "", unescaped)
+}
+
 func TestExecutedCommandFailed(t *testing.T) {
 	cmd := Command{
 		CmdLine:          "ls",

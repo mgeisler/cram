@@ -27,6 +27,7 @@ const (
 	reSuffix    = " (re)"
 	globSuffix  = " (glob)"
 	noEolSuffix = " (no-eol)"
+	escSuffix   = " (esc)"
 )
 
 type InvalidTestError struct {
@@ -146,6 +147,17 @@ func (cmd *ExecutedCommand) failed() bool {
 		case strings.HasSuffix(expected, globSuffix):
 			pattern := expected[:len(expected)-len(globSuffix)]
 			if !matchEntireLine(globToRegexp(pattern), actual) {
+				return true
+			}
+		case strings.HasSuffix(expected, escSuffix):
+			// The same output can be escaped in multiple differnet
+			// ways by the user: both "x (esc)" and "\x78 (esc)" are
+			// ways of saying "x". We normalize the output by
+			// unescaping and then escaping it. This ensures that the
+			// escaped form is the same as what was applied to the
+			// actual output in ParseOutput.
+			expected, err := Unescape(expected)
+			if err != nil || Escape(expected) != actual {
 				return true
 			}
 		default:
@@ -276,6 +288,55 @@ func MakeScript(cmds []Command, banner string) (lines []string) {
 	return
 }
 
+// Escape quotes non-printable characters in s with a backslash. If
+// anything was changed, " (esc)" is added to the result. A final
+// newline in s (if any) is kept unescaped.
+func Escape(s string) string {
+	trimmed := DropEol(s)
+	quoted := strconv.Quote(trimmed)
+	inner := quoted[1 : len(quoted)-1]
+
+	// strconv.Quote changed `"` to `\"` and `\` to `\\` since it
+	// returns a double quoted string. We want to undo this since both
+	// " and \ are printable and need no escaping in our test files.
+	//
+	// Replacing `\"` with `"` is reversable in Unescape since there
+	// can be no lone occurance of `"` in quoted.
+	cleaned := strings.Replace(inner, `\"`, `"`, -1)
+
+	// We cannot do the same for backslash since we won't be able to
+	// reverse this in Unescape (there will most likely be other
+	// occurances of `\` in quoted). However, we simply need to
+	// determine if replacing `\\` with `\` would give us the string
+	// we started with. If it does, we return s unchanged. If not, the
+	// we leave the `\\` as they are since we will be returning a
+	// string marked with "(esc)" in that case.
+	if strings.Replace(cleaned, `\\`, `\`, -1) == trimmed {
+		return s
+	}
+
+	// Add the " (esc)" suffix followed by the EOL (if any) from the
+	// input string.
+	return cleaned + escSuffix + s[len(trimmed):]
+}
+
+// Unescape is the inverse of Escape. It decodes escaped characters
+// such as \t, \x01, etc in s if s ends with escSuffix.
+func Unescape(s string) (string, error) {
+	trimmed := DropEol(s)
+	if !strings.HasSuffix(trimmed, escSuffix) {
+		return s, nil
+	}
+	withoutMarker := trimmed[:len(trimmed)-len(escSuffix)]
+	escaped := strings.Replace(withoutMarker, `"`, `\"`, -1)
+	quoted := `"` + escaped + `"`
+	unquoted, err := strconv.Unquote(quoted)
+	if err != nil {
+		return "", err
+	}
+	return unquoted + s[len(trimmed):], nil
+}
+
 // ParseOutput finds the actual output and exit codes for a slice of
 // commands. The result is a slice of executed commands. The actual
 // output is normalized, meaning that a missing final EOL in the
@@ -300,7 +361,8 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 
 			prefix := line[:lastSpace-len("--- CRAM")]
 			if len(prefix) > 0 {
-				actualOutput = append(actualOutput, prefix+noEolSuffix+"\n")
+				line := prefix + noEolSuffix + "\n"
+				actualOutput = append(actualOutput, Escape(line))
 			}
 
 			number := line[lastSpace+1:]
@@ -318,7 +380,7 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 			actualOutput = nil
 			i++
 		} else {
-			actualOutput = append(actualOutput, line)
+			actualOutput = append(actualOutput, Escape(line))
 		}
 	}
 	if err == io.EOF {
