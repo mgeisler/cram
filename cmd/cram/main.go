@@ -143,6 +143,57 @@ type Options struct {
 	Debug       bool
 }
 
+// processPath runs cram.Process on the paths in the paths channel.
+// The results (and any errors) are fed to the results channel.
+func processPath(jobs *sync.WaitGroup, tempdir string,
+	paths chan pathIndex, results chan processResult) {
+	for pi := range paths {
+		result, err := cram.Process(tempdir, pi.Path, pi.Idx)
+		results <- processResult{result, err}
+	}
+	jobs.Done()
+}
+
+// expandArgs turns command line arguments into pathIndex elements.
+// Directories are walked recursively and .t files found inside them
+// are added to the paths channel. Files on the command line are added
+// to paths directly.
+func expandArgs(args []string, paths chan pathIndex) {
+	// Index passed to cram.Process. Incremented when a pathIndex
+	// is added to paths by the walker or the loop below.
+	idx := 0
+
+	walker := func(path string, info os.FileInfo, err error) error {
+		// Add the path if there is an error (we want the error
+		// from cram.Process) of if it is a .t file.
+		if err != nil || !info.IsDir() && filepath.Ext(path) == ".t" {
+			paths <- pathIndex{path, idx}
+			idx++
+		}
+		return nil
+	}
+
+	for _, path := range args {
+		// We want different behavior for files and directories
+		// mentioned on the command line: files should be
+		// processed regardless of their extension, directories
+		// should be searched recursively for .t files. To
+		// distinguish, we need to stat the path here instead of
+		// simply calling filepath.Walk on it.
+		info, err := os.Lstat(path)
+
+		if err == nil && !info.IsDir() {
+			// Add the path regardless of file extension.
+			paths <- pathIndex{path, idx}
+			idx++
+		} else {
+			// Let the walk function deal with the path.
+			filepath.Walk(path, walker)
+		}
+	}
+	close(paths)
+}
+
 func run(args []string, opts Options) (error, int) {
 	tempdir, err := ioutil.TempDir("", "cram-")
 	if err != nil {
@@ -174,56 +225,20 @@ func run(args []string, opts Options) (error, int) {
 	var jobs sync.WaitGroup
 	jobs.Add(opts.Jobs)
 
+	// Close the results channel when done.
 	go func() {
 		jobs.Wait()
 		close(results)
 	}()
 
+	// Start the worker goroutines that will process the test files
+	// found by expandArgs.
 	for i := 0; i < opts.Jobs; i++ {
-		go func() {
-			for pi := range paths {
-				result, err := cram.Process(tempdir, pi.Path, pi.Idx)
-				results <- processResult{result, err}
-			}
-			jobs.Done()
-		}()
+		go processPath(&jobs, tempdir, paths, results)
 	}
 
-	go func() {
-		// Index passed to cram.Process. Incremented when a pathIndex
-		// is added to paths by the walker or the loop below.
-		idx := 0
-
-		walker := func(path string, info os.FileInfo, err error) error {
-			// Add the path if there is an error (we want the error
-			// from cram.Process) of if it is a .t file.
-			if err != nil || !info.IsDir() && filepath.Ext(path) == ".t" {
-				paths <- pathIndex{path, idx}
-				idx++
-			}
-			return nil
-		}
-
-		for _, path := range args {
-			// We want different behavior for files and directories
-			// mentioned on the command line: files should be
-			// processed regardless of their extension, directories
-			// should be searched recursively for .t files. To
-			// distinguish, we need to stat the path here instead of
-			// simply calling filepath.Walk on it.
-			info, err := os.Lstat(path)
-
-			if err == nil && !info.IsDir() {
-				// Add the path regardless of file extension.
-				paths <- pathIndex{path, idx}
-				idx++
-			} else {
-				// Let the walk function deal with the path.
-				filepath.Walk(path, walker)
-			}
-		}
-		close(paths)
-	}()
+	// Expand the command line arguments into pathIndex elements.
+	go expandArgs(args, paths)
 
 	for result := range results {
 		resultCount++
