@@ -189,6 +189,7 @@ func TestParseOutputOnly(t *testing.T) {
 	test, err := ParseTest(buf, "<string>")
 
 	assert.EqualError(t, err, `<string>:2: Output line "  \n" has no command`)
+	assert.Equal(t, test.Path, "<string>")
 	assert.Len(t, test.Cmds, 0)
 }
 
@@ -374,4 +375,10 @@ bar--- CRAM 1 12345678-1234-abcd-1234-123412345678 ---
 		assert.Equal(t, []string{"bar (no-eol)\n"}, executed[1].ActualOutput)
 		assert.Equal(t, 1, executed[1].ActualExitCode)
 	}
+}
+
+func TestProcessInvalidPath(t *testing.T) {
+	test, err := Process("/tmp", "no-such-file.t", 0)
+	assert.Equal(t, test.Path, "no-such-file.t")
+	assert.Error(t, err)
 }

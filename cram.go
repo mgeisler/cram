@@ -476,6 +476,8 @@ func Patch(r io.Reader, w io.Writer, cmds []ExecutedCommand) (err error) {
 // make the working directory unique inside tempdir and must be
 // different for each test file.
 func Process(tempdir, path string, idx int) (result ExecutedTest, err error) {
+	// Make sure Path is set, even if we fail later.
+	result.Path = path
 	fp, err := os.Open(path)
 	if err != nil {
 		return

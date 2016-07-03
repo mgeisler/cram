@@ -126,7 +126,7 @@ type processResult struct {
 }
 
 func run(paths []string, parallelism int,
-	keepTmp, interactive, debug bool) (error, int) {
+	keepTmp, interactive, verbose, debug bool) (error, int) {
 	tempdir, err := ioutil.TempDir("", "cram-")
 	if err != nil {
 		msg := "Could not create temp directory: " + err.Error()
@@ -185,14 +185,33 @@ func run(paths []string, parallelism int,
 
 		switch {
 		case err != nil:
-			fmt.Fprintln(os.Stderr, err)
-			fmt.Print("E")
+			if verbose {
+				switch err := err.(type) {
+				case *cram.InvalidTestError:
+					fmt.Printf("E %s\n", err)
+				default:
+					fmt.Printf("E %s: %s\n", test.Path, err)
+				}
+			} else {
+				fmt.Fprintln(os.Stderr, err)
+				fmt.Print("E")
+			}
 			errCount++
 		case len(test.Failures) > 0:
-			fmt.Print("F")
+			if verbose {
+				fmt.Printf("F %s: %d of %d commands failed\n",
+					test.Path, len(test.Failures), len(test.Cmds))
+			} else {
+				fmt.Print("F")
+			}
 			failures = append(failures, test)
 		default:
-			fmt.Print(".")
+			if verbose {
+				fmt.Printf(". %s: %d commands passed\n",
+					test.Path, len(test.Cmds))
+			} else {
+				fmt.Print(".")
+			}
 		}
 	}
 	fmt.Print("\n")
@@ -216,6 +235,10 @@ func main() {
 		Flag("interactive", "interactively update test file on failure").
 		Short('i').
 		Bool()
+	verbose := kingpin.
+		Flag("verbose", "show names of test files").
+		Short('v').
+		Bool()
 	debug := kingpin.
 		Flag("debug", "output debug information").
 		Bool()
@@ -235,7 +258,8 @@ func main() {
 	kingpin.Version("cram version 0.0.0")
 	kingpin.Parse()
 
-	err, exitCode := run(*paths, *jobs, *keepTmp, *interactive, *debug)
+	err, exitCode := run(*paths, *jobs, *keepTmp, *interactive,
+		*verbose, *debug)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(exitCode)
