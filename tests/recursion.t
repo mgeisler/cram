@@ -9,6 +9,13 @@ Cram can recursively find test files inside a directory:
   
   # Ran 3 tests (0 commands), 0 errors, 0 failures
 
+Starting Cram without any arguments will make it recurse from the
+current directory:
+
+  $ cram
+  ...
+  # Ran 3 tests (0 commands), 0 errors, 0 failures
+
 It is only .t files that are found:
 
   $ touch foo/bar.go

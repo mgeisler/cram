@@ -306,7 +306,7 @@ func main() {
 		Int()
 	paths := kingpin.
 		Arg("path", "test files or directories").
-		Required().
+		Default(".").
 		Strings()
 
 	kingpin.Version("cram version 0.0.0")
