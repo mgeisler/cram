@@ -148,7 +148,7 @@ func run(paths []string, opts Options) (error, int) {
 		defer os.RemoveAll(tempdir)
 	}
 
-	errCount, cmdCount := 0, 0
+	errCount, cmdCount, resultCount := 0, 0, 0
 	failures := []cram.ExecutedTest{}
 
 	// Number of goroutines to process the test files. We default to 2
@@ -193,6 +193,7 @@ func run(paths []string, opts Options) (error, int) {
 	}()
 
 	for result := range results {
+		resultCount++
 		test := result.Test
 		err := result.Err
 
@@ -239,7 +240,7 @@ func run(paths []string, opts Options) (error, int) {
 	processFailures(failures, opts.Interactive)
 
 	msg := fmt.Sprintf("# Ran %d tests (%d commands), %d errors, %d failures",
-		len(paths), cmdCount, errCount, len(failures))
+		resultCount, cmdCount, errCount, len(failures))
 
 	exitCode := 0
 	if errCount > 0 {
