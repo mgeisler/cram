@@ -225,11 +225,8 @@ func run(args []string, opts Options) (error, int) {
 	var jobs sync.WaitGroup
 	jobs.Add(opts.Jobs)
 
-	// Close the results channel when done.
-	go func() {
-		jobs.Wait()
-		close(results)
-	}()
+	// Expand the command line arguments into pathIndex elements.
+	go expandArgs(args, paths)
 
 	// Start the worker goroutines that will process the test files
 	// found by expandArgs.
@@ -237,8 +234,11 @@ func run(args []string, opts Options) (error, int) {
 		go processPath(&jobs, tempdir, paths, results)
 	}
 
-	// Expand the command line arguments into pathIndex elements.
-	go expandArgs(args, paths)
+	// Close the results channel when done.
+	go func() {
+		jobs.Wait()
+		close(results)
+	}()
 
 	for result := range results {
 		resultCount++
