@@ -10,9 +10,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/kylelemons/godebug/diff"
@@ -125,58 +127,125 @@ type processResult struct {
 	Err  error
 }
 
-func run(paths []string, parallelism int,
-	keepTmp, interactive, verbose, debug bool) (error, int) {
+// Wrapper for a path and an index.
+type pathIndex struct {
+	Path string
+	Idx  int
+}
+
+// Options describe the command line options. They are parsed in main
+// and passed to run.
+type Options struct {
+	Jobs        int
+	KeepTmp     bool
+	Interactive bool
+	Verbose     bool
+	Debug       bool
+}
+
+// processPath runs cram.Process on the paths in the paths channel.
+// The results (and any errors) are fed to the results channel.
+func processPath(jobs *sync.WaitGroup, tempdir string,
+	paths chan pathIndex, results chan processResult) {
+	for pi := range paths {
+		result, err := cram.Process(tempdir, pi.Path, pi.Idx)
+		results <- processResult{result, err}
+	}
+	jobs.Done()
+}
+
+// expandArgs turns command line arguments into pathIndex elements.
+// Directories are walked recursively and .t files found inside them
+// are added to the paths channel. Files on the command line are added
+// to paths directly.
+func expandArgs(args []string, paths chan pathIndex) {
+	// Index passed to cram.Process. Incremented when a pathIndex
+	// is added to paths by the walker or the loop below.
+	idx := 0
+
+	walker := func(path string, info os.FileInfo, err error) error {
+		// Add the path if there is an error (we want the error
+		// from cram.Process) of if it is a .t file.
+		if err != nil || !info.IsDir() && filepath.Ext(path) == ".t" {
+			paths <- pathIndex{path, idx}
+			idx++
+		}
+		return nil
+	}
+
+	for _, path := range args {
+		// We want different behavior for files and directories
+		// mentioned on the command line: files should be
+		// processed regardless of their extension, directories
+		// should be searched recursively for .t files. To
+		// distinguish, we need to stat the path here instead of
+		// simply calling filepath.Walk on it.
+		info, err := os.Lstat(path)
+
+		if err == nil && !info.IsDir() {
+			// Add the path regardless of file extension.
+			paths <- pathIndex{path, idx}
+			idx++
+		} else {
+			// Let the walk function deal with the path.
+			filepath.Walk(path, walker)
+		}
+	}
+	close(paths)
+}
+
+func run(args []string, opts Options) (error, int) {
 	tempdir, err := ioutil.TempDir("", "cram-")
 	if err != nil {
 		msg := "Could not create temp directory: " + err.Error()
 		return errors.New(msg), 2
 	}
-	if keepTmp {
+	if opts.KeepTmp {
 		fmt.Println("# Temporary directory:", tempdir)
 	} else {
 		defer os.RemoveAll(tempdir)
 	}
 
-	errCount, cmdCount := 0, 0
+	errCount, cmdCount, resultCount := 0, 0, 0
 	failures := []cram.ExecutedTest{}
 
 	// Number of goroutines to process the test files. We default to 2
 	// times the number of cores in the main function below.
-	if parallelism < 1 {
-		parallelism = 1
-	}
-	if parallelism > len(paths) {
-		parallelism = len(paths)
+	if opts.Jobs < 1 {
+		opts.Jobs = 1
 	}
 
 	// Input and result channels with space for a few items before we
 	// block.
-	indexes := make(chan int, 8)
+	paths := make(chan pathIndex, 8)
 	results := make(chan processResult, 8)
 
-	for i := 0; i < parallelism; i++ {
-		go func() {
-			for i := range indexes {
-				result, err := cram.Process(tempdir, paths[i], i)
-				results <- processResult{result, err}
-			}
-		}()
+	// Fan-in control that will let us close the results channel once
+	// all jobs are done.
+	var jobs sync.WaitGroup
+	jobs.Add(opts.Jobs)
+
+	// Expand the command line arguments into pathIndex elements.
+	go expandArgs(args, paths)
+
+	// Start the worker goroutines that will process the test files
+	// found by expandArgs.
+	for i := 0; i < opts.Jobs; i++ {
+		go processPath(&jobs, tempdir, paths, results)
 	}
 
+	// Close the results channel when done.
 	go func() {
-		for i := range paths {
-			indexes <- i
-		}
-		close(indexes)
+		jobs.Wait()
+		close(results)
 	}()
 
-	for i := 0; i < len(paths); i++ {
-		result := <-results
+	for result := range results {
+		resultCount++
 		test := result.Test
 		err := result.Err
 
-		if debug {
+		if opts.Debug {
 			fmt.Fprintf(os.Stderr, "# %s\n", test.Path)
 			fmt.Fprintln(os.Stderr, test.Script)
 		}
@@ -185,7 +254,7 @@ func run(paths []string, parallelism int,
 
 		switch {
 		case err != nil:
-			if verbose {
+			if opts.Verbose {
 				switch err := err.(type) {
 				case *cram.InvalidTestError:
 					fmt.Printf("E %s\n", err)
@@ -198,7 +267,7 @@ func run(paths []string, parallelism int,
 			}
 			errCount++
 		case len(test.Failures) > 0:
-			if verbose {
+			if opts.Verbose {
 				fmt.Printf("F %s: %d of %d commands failed\n",
 					test.Path, len(test.Failures), len(test.Cmds))
 			} else {
@@ -206,7 +275,7 @@ func run(paths []string, parallelism int,
 			}
 			failures = append(failures, test)
 		default:
-			if verbose {
+			if opts.Verbose {
 				fmt.Printf(". %s: %d commands passed\n",
 					test.Path, len(test.Cmds))
 			} else {
@@ -216,10 +285,10 @@ func run(paths []string, parallelism int,
 	}
 	fmt.Print("\n")
 
-	processFailures(failures, interactive)
+	processFailures(failures, opts.Interactive)
 
 	msg := fmt.Sprintf("# Ran %d tests (%d commands), %d errors, %d failures",
-		len(paths), cmdCount, errCount, len(failures))
+		resultCount, cmdCount, errCount, len(failures))
 
 	exitCode := 0
 	if errCount > 0 {
@@ -251,15 +320,15 @@ func main() {
 		Default(strconv.Itoa(2 * runtime.NumCPU())).
 		Int()
 	paths := kingpin.
-		Arg("path", "test files").
-		Required().
+		Arg("path", "test files or directories").
+		Default(".").
 		Strings()
 
 	kingpin.Version("cram version 0.0.0")
 	kingpin.Parse()
 
-	err, exitCode := run(*paths, *jobs, *keepTmp, *interactive,
-		*verbose, *debug)
+	opts := Options{*jobs, *keepTmp, *interactive, *verbose, *debug}
+	err, exitCode := run(*paths, opts)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(exitCode)

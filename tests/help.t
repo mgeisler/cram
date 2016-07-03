@@ -1,7 +1,7 @@
 Cram comes with builtin help:
 
   $ cram --help
-  usage: cram [<flags>] <path>...
+  usage: cram [<flags>] [<path>...]
   
   Flags:
         --help         Show context-sensitive help (also try --help-long and
@@ -14,7 +14,7 @@ Cram comes with builtin help:
         --version      Show application version.
   
   Args:
-    <path>  test files
+    [<path>]  test files or directories
   
   [1]
 
