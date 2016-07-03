@@ -14,7 +14,7 @@ Cram comes with builtin help:
         --version      Show application version.
   
   Args:
-    <path>  test files
+    <path>  test files or directories
   
   [1]
 

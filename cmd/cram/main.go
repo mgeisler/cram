@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -126,6 +127,12 @@ type processResult struct {
 	Err  error
 }
 
+// Wrapper for a path and an index.
+type pathIndex struct {
+	Path string
+	Idx  int
+}
+
 // Options describe the command line options. They are parsed in main
 // and passed to run.
 type Options struct {
@@ -136,7 +143,7 @@ type Options struct {
 	Debug       bool
 }
 
-func run(paths []string, opts Options) (error, int) {
+func run(args []string, opts Options) (error, int) {
 	tempdir, err := ioutil.TempDir("", "cram-")
 	if err != nil {
 		msg := "Could not create temp directory: " + err.Error()
@@ -156,13 +163,10 @@ func run(paths []string, opts Options) (error, int) {
 	if opts.Jobs < 1 {
 		opts.Jobs = 1
 	}
-	if opts.Jobs > len(paths) {
-		opts.Jobs = len(paths)
-	}
 
 	// Input and result channels with space for a few items before we
 	// block.
-	indexes := make(chan int, 8)
+	paths := make(chan pathIndex, 8)
 	results := make(chan processResult, 8)
 
 	// Fan-in control that will let us close the results channel once
@@ -177,8 +181,8 @@ func run(paths []string, opts Options) (error, int) {
 
 	for i := 0; i < opts.Jobs; i++ {
 		go func() {
-			for i := range indexes {
-				result, err := cram.Process(tempdir, paths[i], i)
+			for pi := range paths {
+				result, err := cram.Process(tempdir, pi.Path, pi.Idx)
 				results <- processResult{result, err}
 			}
 			jobs.Done()
@@ -186,10 +190,39 @@ func run(paths []string, opts Options) (error, int) {
 	}
 
 	go func() {
-		for i := range paths {
-			indexes <- i
+		// Index passed to cram.Process. Incremented when a pathIndex
+		// is added to paths by the walker or the loop below.
+		idx := 0
+
+		walker := func(path string, info os.FileInfo, err error) error {
+			// Add the path if there is an error (we want the error
+			// from cram.Process) of if it is a .t file.
+			if err != nil || !info.IsDir() && filepath.Ext(path) == ".t" {
+				paths <- pathIndex{path, idx}
+				idx++
+			}
+			return nil
 		}
-		close(indexes)
+
+		for _, path := range args {
+			// We want different behavior for files and directories
+			// mentioned on the command line: files should be
+			// processed regardless of their extension, directories
+			// should be searched recursively for .t files. To
+			// distinguish, we need to stat the path here instead of
+			// simply calling filepath.Walk on it.
+			info, err := os.Lstat(path)
+
+			if err == nil && !info.IsDir() {
+				// Add the path regardless of file extension.
+				paths <- pathIndex{path, idx}
+				idx++
+			} else {
+				// Let the walk function deal with the path.
+				filepath.Walk(path, walker)
+			}
+		}
+		close(paths)
 	}()
 
 	for result := range results {
@@ -272,7 +305,7 @@ func main() {
 		Default(strconv.Itoa(2 * runtime.NumCPU())).
 		Int()
 	paths := kingpin.
-		Arg("path", "test files").
+		Arg("path", "test files or directories").
 		Required().
 		Strings()
 
