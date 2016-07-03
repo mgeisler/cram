@@ -125,14 +125,23 @@ type processResult struct {
 	Err  error
 }
 
-func run(paths []string, parallelism int,
-	keepTmp, interactive, verbose, debug bool) (error, int) {
+// Options describe the command line options. They are parsed in main
+// and passed to run.
+type Options struct {
+	Parallelism int
+	KeepTmp     bool
+	Interactive bool
+	Verbose     bool
+	Debug       bool
+}
+
+func run(paths []string, opts Options) (error, int) {
 	tempdir, err := ioutil.TempDir("", "cram-")
 	if err != nil {
 		msg := "Could not create temp directory: " + err.Error()
 		return errors.New(msg), 2
 	}
-	if keepTmp {
+	if opts.KeepTmp {
 		fmt.Println("# Temporary directory:", tempdir)
 	} else {
 		defer os.RemoveAll(tempdir)
@@ -143,11 +152,11 @@ func run(paths []string, parallelism int,
 
 	// Number of goroutines to process the test files. We default to 2
 	// times the number of cores in the main function below.
-	if parallelism < 1 {
-		parallelism = 1
+	if opts.Parallelism < 1 {
+		opts.Parallelism = 1
 	}
-	if parallelism > len(paths) {
-		parallelism = len(paths)
+	if opts.Parallelism > len(paths) {
+		opts.Parallelism = len(paths)
 	}
 
 	// Input and result channels with space for a few items before we
@@ -155,7 +164,7 @@ func run(paths []string, parallelism int,
 	indexes := make(chan int, 8)
 	results := make(chan processResult, 8)
 
-	for i := 0; i < parallelism; i++ {
+	for i := 0; i < opts.Parallelism; i++ {
 		go func() {
 			for i := range indexes {
 				result, err := cram.Process(tempdir, paths[i], i)
@@ -176,7 +185,7 @@ func run(paths []string, parallelism int,
 		test := result.Test
 		err := result.Err
 
-		if debug {
+		if opts.Debug {
 			fmt.Fprintf(os.Stderr, "# %s\n", test.Path)
 			fmt.Fprintln(os.Stderr, test.Script)
 		}
@@ -185,7 +194,7 @@ func run(paths []string, parallelism int,
 
 		switch {
 		case err != nil:
-			if verbose {
+			if opts.Verbose {
 				switch err := err.(type) {
 				case *cram.InvalidTestError:
 					fmt.Printf("E %s\n", err)
@@ -198,7 +207,7 @@ func run(paths []string, parallelism int,
 			}
 			errCount++
 		case len(test.Failures) > 0:
-			if verbose {
+			if opts.Verbose {
 				fmt.Printf("F %s: %d of %d commands failed\n",
 					test.Path, len(test.Failures), len(test.Cmds))
 			} else {
@@ -206,7 +215,7 @@ func run(paths []string, parallelism int,
 			}
 			failures = append(failures, test)
 		default:
-			if verbose {
+			if opts.Verbose {
 				fmt.Printf(". %s: %d commands passed\n",
 					test.Path, len(test.Cmds))
 			} else {
@@ -216,7 +225,7 @@ func run(paths []string, parallelism int,
 	}
 	fmt.Print("\n")
 
-	processFailures(failures, interactive)
+	processFailures(failures, opts.Interactive)
 
 	msg := fmt.Sprintf("# Ran %d tests (%d commands), %d errors, %d failures",
 		len(paths), cmdCount, errCount, len(failures))
@@ -258,8 +267,8 @@ func main() {
 	kingpin.Version("cram version 0.0.0")
 	kingpin.Parse()
 
-	err, exitCode := run(*paths, *jobs, *keepTmp, *interactive,
-		*verbose, *debug)
+	opts := Options{*jobs, *keepTmp, *interactive, *verbose, *debug}
+	err, exitCode := run(*paths, opts)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(exitCode)
