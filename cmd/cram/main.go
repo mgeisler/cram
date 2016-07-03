@@ -128,7 +128,7 @@ type processResult struct {
 // Options describe the command line options. They are parsed in main
 // and passed to run.
 type Options struct {
-	Parallelism int
+	Jobs        int
 	KeepTmp     bool
 	Interactive bool
 	Verbose     bool
@@ -152,11 +152,11 @@ func run(paths []string, opts Options) (error, int) {
 
 	// Number of goroutines to process the test files. We default to 2
 	// times the number of cores in the main function below.
-	if opts.Parallelism < 1 {
-		opts.Parallelism = 1
+	if opts.Jobs < 1 {
+		opts.Jobs = 1
 	}
-	if opts.Parallelism > len(paths) {
-		opts.Parallelism = len(paths)
+	if opts.Jobs > len(paths) {
+		opts.Jobs = len(paths)
 	}
 
 	// Input and result channels with space for a few items before we
@@ -164,7 +164,7 @@ func run(paths []string, opts Options) (error, int) {
 	indexes := make(chan int, 8)
 	results := make(chan processResult, 8)
 
-	for i := 0; i < opts.Parallelism; i++ {
+	for i := 0; i < opts.Jobs; i++ {
 		go func() {
 			for i := range indexes {
 				result, err := cram.Process(tempdir, paths[i], i)
