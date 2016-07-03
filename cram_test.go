@@ -376,3 +376,9 @@ bar--- CRAM 1 12345678-1234-abcd-1234-123412345678 ---
 		assert.Equal(t, 1, executed[1].ActualExitCode)
 	}
 }
+
+func TestProcessInvalidPath(t *testing.T) {
+	test, err := Process("/tmp", "no-such-file.t", 0)
+	assert.Equal(t, test.Path, "no-such-file.t")
+	assert.Error(t, err)
+}
