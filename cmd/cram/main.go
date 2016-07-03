@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/kylelemons/godebug/diff"
@@ -164,12 +165,23 @@ func run(paths []string, opts Options) (error, int) {
 	indexes := make(chan int, 8)
 	results := make(chan processResult, 8)
 
+	// Fan-in control that will let us close the results channel once
+	// all jobs are done.
+	var jobs sync.WaitGroup
+	jobs.Add(opts.Jobs)
+
+	go func() {
+		jobs.Wait()
+		close(results)
+	}()
+
 	for i := 0; i < opts.Jobs; i++ {
 		go func() {
 			for i := range indexes {
 				result, err := cram.Process(tempdir, paths[i], i)
 				results <- processResult{result, err}
 			}
+			jobs.Done()
 		}()
 	}
 
@@ -180,8 +192,7 @@ func run(paths []string, opts Options) (error, int) {
 		close(indexes)
 	}()
 
-	for i := 0; i < len(paths); i++ {
-		result := <-results
+	for result := range results {
 		test := result.Test
 		err := result.Err
 
