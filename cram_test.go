@@ -315,6 +315,13 @@ func TestMakeScript(t *testing.T) {
 	}
 }
 
+func TestMakeEnvironment(t *testing.T) {
+	pairs, err := MakeEnvironment("/foo/bar.t")
+	assert.NoError(t, err)
+	env := parseEnviron(pairs)
+	assert.Equal(t, "/foo", env["TESTDIR"])
+}
+
 func TestParseOutputEmpty(t *testing.T) {
 	cmds := []Command{
 		{"touch foo", nil, 0, 0},
