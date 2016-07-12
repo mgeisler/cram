@@ -363,6 +363,9 @@ func TestMakeEnvironment(t *testing.T) {
 	assert.NoError(t, err)
 	env := parseEnviron(pairs)
 	assert.Equal(t, "/foo", env["TESTDIR"])
+	assert.Equal(t, "C", env["LANG"])
+	assert.Equal(t, "C", env["LC_ALL"])
+	assert.Equal(t, "C", env["LANGUAGE"])
 }
 
 func TestParseOutputEmpty(t *testing.T) {

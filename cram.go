@@ -327,6 +327,10 @@ func MakeEnvironment(path string) ([]string, error) {
 	env := parseEnviron(os.Environ())
 	// Test file directory
 	env["TESTDIR"] = filepath.Dir(abs)
+	// Reset locale variables
+	env["LC_ALL"] = "C"
+	env["LANG"] = "C"
+	env["LANGUAGE"] = "C"
 	return unparseEnviron(env), nil
 }
 

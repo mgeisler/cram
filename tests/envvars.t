@@ -21,3 +21,8 @@ This can differ from one test file to another:
   $ cram -j 1 ../
   ..
   # Ran 2 tests (2 commands), 0 errors, 0 failures
+
+Environment variables related to the locale are also reset:
+
+  $ echo $LC_ALL, $LANG, $LANGUAGE
+  C, C, C
