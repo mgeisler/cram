@@ -6,6 +6,7 @@ package cram
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 
@@ -312,6 +313,48 @@ func TestMakeScript(t *testing.T) {
 		assert.Equal(t, banner, lines[1])
 		assert.Equal(t, "touch foo.txt", lines[2])
 		assert.Equal(t, banner, lines[3])
+	}
+}
+
+func TestParseEnviron(t *testing.T) {
+	var tests = []struct {
+		input    []string
+		expected Env
+	}{
+		{[]string{}, Env{}},
+		{[]string{"foo="}, Env{"foo": ""}},
+		{[]string{"foo=x", "bar=y"}, Env{"foo": "x", "bar": "y"}},
+		{[]string{"foo=x", "foo=y"}, Env{"foo": "y"}},
+	}
+
+	for _, test := range tests {
+		actual := parseEnviron(test.input)
+		assert.Equal(t, test.expected, actual,
+			fmt.Sprintf("parseEnviron(%#v)", test.input))
+	}
+}
+
+func TestParseEnvironError(t *testing.T) {
+	assert.Panics(t, func() {
+		parseEnviron([]string{"malformed entry"})
+	})
+}
+
+func TestUnparseEnviron(t *testing.T) {
+	var tests = []struct {
+		input    Env
+		expected []string
+	}{
+		{Env{}, []string{}},
+		{Env{"foo": "x", "bar": "y"}, []string{"bar=y", "foo=x"}},
+		{Env{"foo": ""}, []string{"foo="}},
+	}
+
+	for _, test := range tests {
+		actual := unparseEnviron(test.input)
+		sort.Strings(actual)
+		assert.Equal(t, test.expected, actual,
+			fmt.Sprintf("unparseEnviron(%#v)", test.input))
 	}
 }
 
