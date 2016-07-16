@@ -31,3 +31,16 @@ The timezone is reset to GMT:
 
   $ echo $TZ
   GMT
+
+The CDPATH and GREP_OPTIONS environment variables are removed from the
+environment:
+
+  $ cat > reset.t << EOM
+  >   $ echo \$CDPATH
+  >   
+  >   $ echo \$GREP_OPTIONS
+  >   
+  > EOM
+  $ CDPATH=foo GREP_OPTIONS=bar cram reset.t
+  .
+  # Ran 1 tests (2 commands), 0 errors, 0 failures

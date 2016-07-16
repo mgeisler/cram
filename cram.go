@@ -333,6 +333,9 @@ func MakeEnvironment(path string) ([]string, error) {
 	env["LANGUAGE"] = "C"
 	// Reset timezone
 	env["TZ"] = "GMT"
+	// Remove potentially problematic variables
+	delete(env, "CDPATH")
+	delete(env, "GREP_OPTIONS")
 	return unparseEnviron(env), nil
 }
 
