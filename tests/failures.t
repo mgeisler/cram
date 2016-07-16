@@ -5,7 +5,7 @@ actual output:
   $ echo '  bar'        >> test.t
   $ cram test.t
   F
-  When executing "echo foo":
+  test.t:1: When executing "echo foo":
   -bar
   +foo
   # Ran 1 tests (1 commands), 0 errors, 1 failures
@@ -16,7 +16,7 @@ Unexpected output:
   $ echo '  $ echo foo' > unexpected.t
   $ cram unexpected.t
   F
-  When executing "echo foo":
+  unexpected.t:1: When executing "echo foo":
   +foo
   # Ran 1 tests (1 commands), 0 errors, 1 failures
   [1]
@@ -27,7 +27,7 @@ Missing output:
   $ echo '  missing' >> missing.t
   $ cram missing.t
   F
-  When executing "true":
+  missing.t:1: When executing "true":
   -missing
   # Ran 1 tests (1 commands), 0 errors, 1 failures
   [1]

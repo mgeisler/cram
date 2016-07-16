@@ -13,7 +13,7 @@ a time:
 
   $ echo y | cram --interactive test.t
   F
-  When executing "echo foo":
+  test.t:1: When executing "echo foo":
   -bar
   +foo
   Accept this change? Patched test.t
@@ -41,13 +41,13 @@ Here we accept the 'foo' and 'baz' outputs:
 
   $ echo "y\nn\ny" | cram --interactive multiple.t
   F
-  When executing "echo foo":
+  multiple.t:1: When executing "echo foo":
   -first
   +foo
-  Accept this change? When executing "echo bar":
+  Accept this change? multiple.t:3: When executing "echo bar":
   -second
   +bar
-  Accept this change? When executing "echo baz":
+  Accept this change? multiple.t:5: When executing "echo baz":
   -third
   +baz
   Accept this change? Patched multiple.t
@@ -67,7 +67,7 @@ again:
 
   $ echo something else | cram --interactive multiple.t
   F
-  When executing "echo bar":
+  multiple.t:3: When executing "echo bar":
   -second
   +bar
   Accept this change? Please answer 'yes' or 'no'
@@ -98,12 +98,12 @@ You will also be prompted to update the exit code:
   > EOM
   $ yes | cram --interactive exit-code.t
   F
-  When executing "(exit 7)":
+  exit-code.t:2: When executing "(exit 7)":
   -[10]
   +[7]
-  Accept this change? When executing "false":
+  Accept this change? exit-code.t:5: When executing "false":
   +[1]
-  Accept this change? When executing "true":
+  Accept this change? exit-code.t:7: When executing "true":
   -[42]   
   Accept this change? Patched exit-code.t
   # Ran 1 tests (3 commands), 0 errors, 1 failures

@@ -25,7 +25,7 @@ Changes in output are shown normally:
   > EOM
   $ cram cont.t
   F
-  When executing "echo foo\necho bar\necho baz":
+  cont.t:4: When executing "echo foo\necho bar\necho baz":
   +foo
   +bar
   +baz
@@ -36,7 +36,7 @@ You can patch such a command:
 
   $ yes | cram --interactive cont.t
   F
-  When executing "echo foo\necho bar\necho baz":
+  cont.t:4: When executing "echo foo\necho bar\necho baz":
   +foo
   +bar
   +baz

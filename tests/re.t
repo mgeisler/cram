@@ -17,7 +17,7 @@ When such a line fails, you get the diff as normal:
   $ echo '  [0-9]+ (re)'  >> failure.t
   $ cram failure.t
   F
-  When executing "echo foo42":
+  failure.t:1: When executing "echo foo42":
   -[0-9]+ (re)
   +foo42
   # Ran 1 tests (1 commands), 0 errors, 1 failures
@@ -33,10 +33,10 @@ The pattern is anchored at the beginning and the end of the line:
   > EOM
   $ cram anchor.t
   F
-  When executing "echo foobar":
+  anchor.t:1: When executing "echo foobar":
   -foo (re)
   +foobar
-  When executing "echo foobar":
+  anchor.t:3: When executing "echo foobar":
   -bar (re)
   +foobar
   # Ran 1 tests (2 commands), 0 errors, 1 failures

@@ -39,7 +39,7 @@ Changes in output are marked with (esc) as necessary:
   > EOM
   $ cram diff.t
   F
-  When executing "printf 'foo\\tbar\\n'":
+  diff.t:1: When executing "printf 'foo\\tbar\\n'":
   -foo bar
   +foo\tbar (esc)
   # Ran 1 tests (1 commands), 0 errors, 1 failures
@@ -49,7 +49,7 @@ Patching works as expected:
 
   $ yes | cram --interactive diff.t
   F
-  When executing "printf 'foo\\tbar\\n'":
+  diff.t:1: When executing "printf 'foo\\tbar\\n'":
   -foo bar
   +foo\tbar (esc)
   Accept this change? Patched diff.t

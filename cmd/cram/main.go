@@ -56,7 +56,8 @@ func processFailures(tests []cram.ExecutedTest, interactive bool) (
 		var needPatching []cram.ExecutedCommand
 
 		for _, cmd := range test.Failures {
-			fmt.Printf("When executing %+#v:\n", cram.DropEol(cmd.CmdLine))
+			fmt.Printf("%s:%d: When executing %+#v:\n",
+				test.Path, cmd.Lineno, cram.DropEol(cmd.CmdLine))
 
 			expected := cmd.ExpectedOutput
 			actual := cmd.ActualOutput

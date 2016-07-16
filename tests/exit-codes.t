@@ -10,7 +10,7 @@ Test failures set the exit code to 1:
   $ echo '  $ echo foo' >> extra-output.t
   $ cram -j 1 *.t
   .F
-  When executing "echo foo":
+  extra-output.t:1: When executing "echo foo":
   +foo
   # Ran 2 tests (1 commands), 0 errors, 1 failures
   [1]
@@ -21,7 +21,7 @@ and the exit code is set to 2:
   $ cram -j 1 does-not-exist.t *.t
   open does-not-exist.t: no such file or directory
   E.F
-  When executing "echo foo":
+  extra-output.t:1: When executing "echo foo":
   +foo
   # Ran 3 tests (1 commands), 1 errors, 1 failures
   [2]
@@ -41,7 +41,7 @@ Mismatches in exit codes are shown in the Cram output:
   $ echo '  $ false' >> false.t
   $ cram false.t
   F
-  When executing "false":
+  false.t:1: When executing "false":
   +[1]
   # Ran 1 tests (1 commands), 0 errors, 1 failures
   [1]

@@ -14,10 +14,10 @@ Changes in output are indicated using (no-eol) marker the diff output:
   > EOM
   $ cram diff.t
   F
-  When executing "echo -n hello":
+  diff.t:1: When executing "echo -n hello":
   -hello
   +hello (no-eol)
-  When executing "echo world":
+  diff.t:3: When executing "echo world":
   -world (no-eol)
   +world
   # Ran 1 tests (2 commands), 0 errors, 1 failures
@@ -28,10 +28,10 @@ necessary:
 
   $ yes | cram --interactive diff.t
   F
-  When executing "echo -n hello":
+  diff.t:1: When executing "echo -n hello":
   -hello
   +hello (no-eol)
-  Accept this change? When executing "echo world":
+  Accept this change? diff.t:3: When executing "echo world":
   -world (no-eol)
   +world
   Accept this change? Patched diff.t

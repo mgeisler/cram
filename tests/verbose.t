@@ -18,7 +18,7 @@ The number of failed commands is shown for failed test files:
   $ cram -v failure.t
   F failure.t: 1 of 2 commands failed
   
-  When executing "false":
+  failure.t:1: When executing "false":
   +[1]
   # Ran 1 tests (2 commands), 0 errors, 1 failures
   [1]

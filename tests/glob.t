@@ -26,7 +26,7 @@ you cannot match a newline with either character:
   $ echo '  a?b (glob)'         >> newline.t
   $ cram newline.t
   F
-  When executing "echo a; echo b":
+  newline.t:1: When executing "echo a; echo b":
   -a?b (glob)
   +a
   +b
