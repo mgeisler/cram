@@ -26,3 +26,8 @@ Environment variables related to the locale are also reset:
 
   $ echo $LC_ALL, $LANG, $LANGUAGE
   C, C, C
+
+The timezone is reset to GMT:
+
+  $ echo $TZ
+  GMT

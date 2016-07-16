@@ -331,6 +331,8 @@ func MakeEnvironment(path string) ([]string, error) {
 	env["LC_ALL"] = "C"
 	env["LANG"] = "C"
 	env["LANGUAGE"] = "C"
+	// Reset timezone
+	env["TZ"] = "GMT"
 	return unparseEnviron(env), nil
 }
 
