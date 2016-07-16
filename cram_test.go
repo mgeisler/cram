@@ -367,6 +367,8 @@ func TestMakeEnvironment(t *testing.T) {
 	assert.Equal(t, "C", env["LC_ALL"])
 	assert.Equal(t, "C", env["LANGUAGE"])
 	assert.Equal(t, "GMT", env["TZ"])
+	assert.Equal(t, "xterm", env["TERM"])
+	assert.Equal(t, "80", env["COLUMNS"])
 }
 
 func TestParseOutputEmpty(t *testing.T) {

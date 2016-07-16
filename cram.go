@@ -333,6 +333,9 @@ func MakeEnvironment(path string) ([]string, error) {
 	env["LANGUAGE"] = "C"
 	// Reset timezone
 	env["TZ"] = "GMT"
+	// Reset terminal
+	env["TERM"] = "xterm"
+	env["COLUMNS"] = "80"
 	// Remove potentially problematic variables
 	delete(env, "CDPATH")
 	delete(env, "GREP_OPTIONS")

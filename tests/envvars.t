@@ -32,6 +32,11 @@ The timezone is reset to GMT:
   $ echo $TZ
   GMT
 
+The terminal is always an xterm with 80 columns:
+
+  $ echo $TERM $COLUMNS
+  xterm 80
+
 The CDPATH and GREP_OPTIONS environment variables are removed from the
 environment:
 
