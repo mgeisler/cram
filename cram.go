@@ -30,6 +30,8 @@ const (
 	escSuffix   = " (esc)"
 )
 
+type Env map[string]string
+
 type InvalidTestError struct {
 	Path   string // Path to test file.
 	Lineno int    // Line number of failure
@@ -288,6 +290,58 @@ func MakeScript(cmds []Command, banner string) (lines []string) {
 	return
 }
 
+// parseEnviron turns a slice of "key=value" pairs into a map from
+// "key" to "value". The inverse is unparseEnviron.
+func parseEnviron(pairs []string) Env {
+	env := make(Env, len(pairs))
+	for _, pair := range pairs {
+		i := strings.IndexByte(pair, '=')
+		if i < 0 {
+			panic(fmt.Sprintf("parseEnviron: found no '=' in %q", pair))
+		}
+		env[pair[:i]] = pair[i+1:]
+	}
+	return env
+}
+
+// unparseEnviron turns a map of keys and values into a slice of
+// "key=value" strings. It is the inverse of parseEnviron.
+func unparseEnviron(env Env) []string {
+	pairs := make([]string, len(env))
+	i := 0
+	for key, value := range env {
+		pairs[i] = key + "=" + value
+		i++
+	}
+	return pairs
+}
+
+// MakeEnvironment prepares the environment to be used when executing
+// the test in the given path. It currently sets TESTDIR to the
+// dirname of path.
+func MakeEnvironment(path string) ([]string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+	env := parseEnviron(os.Environ())
+	// Test file directory
+	env["TESTDIR"] = filepath.Dir(abs)
+	// Reset locale variables
+	env["LC_ALL"] = "C"
+	env["LANG"] = "C"
+	env["LANGUAGE"] = "C"
+	// Reset timezone
+	env["TZ"] = "GMT"
+	// Reset terminal
+	env["TERM"] = "xterm"
+	env["COLUMNS"] = "80"
+	// Remove potentially problematic variables
+	delete(env, "CDPATH")
+	delete(env, "GREP_OPTIONS")
+	return unparseEnviron(env), nil
+}
+
 // Escape quotes non-printable characters in s with a backslash. If
 // anything was changed, " (esc)" is added to the result. A final
 // newline in s (if any) is kept unescaped.
@@ -390,10 +444,11 @@ func ParseOutput(cmds []Command, output []byte, banner string) (
 }
 
 // Execute a script in the specified working directory.
-func ExecuteScript(workdir string, lines []string) ([]byte, error) {
+func ExecuteScript(workdir string, env []string, lines []string) ([]byte, error) {
 	script := strings.Join(lines, "")
 	cmd := exec.Command("/bin/sh", "-")
 	cmd.Dir = workdir
+	cmd.Env = env
 	cmd.Stdin = strings.NewReader(script)
 	return cmd.CombinedOutput()
 }
@@ -501,8 +556,12 @@ func Process(tempdir, path string, idx int) (result ExecutedTest, err error) {
 	u := uuid.NewV4()
 	banner := MakeBanner(u)
 	lines := MakeScript(test.Cmds, banner)
+	env, err := MakeEnvironment(path)
+	if err != nil {
+		return
+	}
 
-	output, err := ExecuteScript(workdir, lines)
+	output, err := ExecuteScript(workdir, env, lines)
 	if err != nil {
 		return
 	}
