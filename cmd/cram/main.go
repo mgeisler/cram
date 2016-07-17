@@ -16,9 +16,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/alecthomas/kingpin"
 	"github.com/kylelemons/godebug/diff"
 	"github.com/mgeisler/cram"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 // We use a single, shared reader of os.Stdin to avoid losing data due
