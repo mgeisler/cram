@@ -11,6 +11,7 @@ Cram comes with builtin help:
         --debug        output debug information
         --keep-tmp     keep temporary directory after executing tests
     -j, --jobs=\d+ +   number of tests to run in parallel (re)
+        --color=auto   use colors in output
         --version      Show application version.
   
   Args:

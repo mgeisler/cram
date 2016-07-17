@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/fatih/color"
 	"github.com/kylelemons/godebug/diff"
 	"github.com/mgeisler/cram"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -29,6 +30,18 @@ import (
 //
 //   $ echo "x\ny" | cram --interactive
 var stdinReader = bufio.NewReader(os.Stdin)
+
+// Color definitions
+var (
+	addedColor   = color.New(color.FgGreen)
+	deletedColor = color.New(color.FgRed)
+)
+
+const (
+	optAlways = "always"
+	optNever  = "never"
+	optAuto   = "auto"
+)
 
 func booleanPrompt(prompt string) (bool, error) {
 	for {
@@ -74,10 +87,10 @@ func processFailures(tests []cram.ExecutedTest, interactive bool) (
 			chunks := diff.DiffChunks(expected, actual)
 			for _, chunk := range chunks {
 				for _, line := range chunk.Added {
-					fmt.Printf("+%s", line)
+					addedColor.Printf("+%s", line)
 				}
 				for _, line := range chunk.Deleted {
-					fmt.Printf("-%s", line)
+					deletedColor.Printf("-%s", line)
 				}
 				for _, line := range chunk.Equal {
 					fmt.Printf(" %s", line)
@@ -142,6 +155,7 @@ type Options struct {
 	Interactive bool
 	Verbose     bool
 	Debug       bool
+	Color       string
 }
 
 // processPath runs cram.Process on the paths in the paths channel.
@@ -195,7 +209,20 @@ func expandArgs(args []string, paths chan pathIndex) {
 	close(paths)
 }
 
+func parseColor(c string) {
+	switch c {
+	case optAlways:
+		color.NoColor = false
+	case optNever:
+		color.NoColor = true
+	}
+	// Otherwise leave color.NoColor unchanged. This corresponds to
+	// the "auto" case.
+}
+
 func run(args []string, opts Options) (error, int) {
+	parseColor(opts.Color)
+
 	tempdir, err := ioutil.TempDir("", "cram-")
 	if err != nil {
 		msg := "Could not create temp directory: " + err.Error()
@@ -320,6 +347,10 @@ func main() {
 		Short('j').
 		Default(strconv.Itoa(2 * runtime.NumCPU())).
 		Int()
+	color := kingpin.
+		Flag("color", "use colors in output").
+		Default("auto").
+		Enum(optAlways, optNever, optAuto)
 	paths := kingpin.
 		Arg("path", "test files or directories").
 		Default(".").
@@ -328,7 +359,7 @@ func main() {
 	kingpin.Version("cram version 0.0.0")
 	kingpin.Parse()
 
-	opts := Options{*jobs, *keepTmp, *interactive, *verbose, *debug}
+	opts := Options{*jobs, *keepTmp, *interactive, *verbose, *debug, *color}
 	err, exitCode := run(*paths, opts)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
