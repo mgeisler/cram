@@ -18,8 +18,9 @@ used in a production setting.
 
 ## Documentation
 
-Please take a look at [the Cram test suite][tests]. The tests there
-serve as documentation as well as a regression test suite.
+There is currently no real documentation, but please take a look at
+[the Cram test suite][tests]. The test files serve as a a simple form
+of documentation as well as a regression test suite.
 
 ## License
 
