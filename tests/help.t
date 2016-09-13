@@ -16,7 +16,6 @@ Cram comes with builtin help:
   Args:
     [<path>]  test files or directories
   
-  [1]
 
 The traditional --version flag also works:
 
